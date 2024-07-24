@@ -45,6 +45,16 @@ def rename_img(old_p, new_name):
     os.rename(old_p, new_p)
     return new_p
 
+# 定義搜尋文本並提取對應區域作為全頁寬度圖片的函數
+def search_extract_img(file, text, out_dir, h, offset=0):
+    res = search_pdf(file, text)
+    if res:
+        page_num, rect = res[0]
+        img_p = extract_img(file, page_num, rect, out_dir, h=h, offset=offset)
+        new_img_p = rename_img(img_p, f"{text}.png")
+        return page_num, new_img_p
+    return None, None
+
 # 定義從左到右、從上到下提取文字的函數
 def extract_text_blocks(file):
     doc = fitz.open(file)
