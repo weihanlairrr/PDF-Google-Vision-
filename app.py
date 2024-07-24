@@ -4,7 +4,7 @@ import os
 import shutil
 import zipfile
 import pandas as pd
-from google.cloud import vision
+from google.cloud import vision, language_v1
 from PIL import Image, ImageEnhance
 import io
 
@@ -17,7 +17,6 @@ def clear_directory(directory):
         shutil.rmtree(directory)
     os.makedirs(directory, exist_ok=True)
 
-# 定義在PDF中搜尋文本並返回頁碼和矩形區域的函數
 def search_pdf(file, text):
     doc = fitz.open(file)
     res = []
@@ -27,7 +26,6 @@ def search_pdf(file, text):
             res.append((i + 1, inst))
     return res
 
-# 定義提取頁面特定區域作為圖片（全頁寬度），高解析度的函數
 def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
     doc = fitz.open(file)
     page = doc.load_page(page_num - 1)
@@ -39,13 +37,11 @@ def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
     pix.save(img_path)
     return img_path
 
-# 定義重命名圖片文件的函數
 def rename_img(old_p, new_name):
     new_p = os.path.join(os.path.dirname(old_p), new_name)
     os.rename(old_p, new_p)
     return new_p
 
-# 定義搜尋文本並提取對應區域作為全頁寬度圖片的函數
 def search_extract_img(file, text, out_dir, h, offset=0):
     res = search_pdf(file, text)
     if res:
@@ -55,7 +51,6 @@ def search_extract_img(file, text, out_dir, h, offset=0):
         return page_num, new_img_p
     return None, None
 
-# 定義搜尋多個文本並創建壓縮文件的函數，情況1
 def search_and_zip_case1(file, texts, h, out_dir, zipf):
     total_files = len(texts)
     progress_bar = st.progress(0)
@@ -66,14 +61,12 @@ def search_and_zip_case1(file, texts, h, out_dir, zipf):
         page_num, img_p = search_extract_img(file, text, out_dir, h=h)
         if img_p:
             zipf.write(img_p, os.path.basename(img_p))
-        # 更新進度條
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
     progress_bar.empty()
     progress_text.empty()
 
-# 定義搜尋多個文本並創建壓縮文件的函數，情況2
 def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     total_files = len(texts)
     progress_bar = st.progress(0)
@@ -91,29 +84,18 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
             img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
             new_img_p = rename_img(img_p, f"{text}.png")
             zipf.write(new_img_p, os.path.basename(new_img_p))
-        # 更新進度條
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
     progress_bar.empty()
     progress_text.empty()
 
-# 定義圖像預處理函數
 def preprocess_image(img):
-    # 轉換為灰度圖像
     img = img.convert('L')
-    # 增強對比度
     enhancer = ImageEnhance.Contrast(img)
     img = enhancer.enhance(2)
     return img
 
-# 定義文本格式化函數
-def format_text(text):
-    lines = text.split('\n\n')
-    formatted_lines = [line.strip() for line in lines if line.strip()]
-    return '\n'.join(formatted_lines)
-
-# 使用 Google Vision API 提取文本
 def extract_text_from_image(img_path):
     client = vision.ImageAnnotatorClient()
     with io.open(img_path, 'rb') as image_file:
@@ -122,10 +104,36 @@ def extract_text_from_image(img_path):
     response = client.text_detection(image=image)
     texts = response.text_annotations
     if texts:
-        return texts[0].description
-    return ""
+        return texts
+    return []
 
-# 初始化 session state 變數
+def analyze_text_with_nlp(text):
+    client = language_v1.LanguageServiceClient()
+    document = language_v1.Document(content=text, type_=language_v1.Document.Type.PLAIN_TEXT)
+    response = client.analyze_entities(document=document)
+    entities = response.entities
+    entity_texts = {entity.name: entity for entity in entities}
+    return entity_texts
+
+def process_and_match_text_blocks(text_blocks):
+    if not text_blocks:
+        return ""
+    
+    description = text_blocks[0].description
+    blocks = text_blocks[1:]
+
+    block_data = [(block.bounding_poly.vertices, block.description) for block in blocks]
+    sorted_blocks = sorted(block_data, key=lambda x: (x[0][0].y, x[0][0].x))
+    combined_text = " ".join([text for _, text in sorted_blocks])
+    
+    entities = analyze_text_with_nlp(combined_text)
+    
+    formatted_text = ""
+    for entity_name, entity in entities.items():
+        formatted_text += f"{entity_name}: {entity.name}\n"
+    
+    return formatted_text.strip()
+
 if 'zip_buffer' not in st.session_state:
     st.session_state.zip_buffer = None
 if 'zip_file_ready' not in st.session_state:
@@ -134,7 +142,7 @@ if 'df_text' not in st.session_state:
     st.session_state.df_text = pd.DataFrame()
 
 def main():
-    create_directories()  # 確保必要的目錄存在
+    create_directories()
 
     st.title("PDF截圖和文字提取工具")
 
@@ -170,7 +178,7 @@ def main():
         if st.button("開始執行"):
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
-            clear_directory(output_dir)  # 清空 output 目錄
+            clear_directory(output_dir)
 
             pdf_path = os.path.join(temp_dir, pdf_file.name)
             with open(pdf_path, "wb") as f:
@@ -203,8 +211,8 @@ def main():
                     img = Image.open(img_path)
                     img = preprocess_image(img)
 
-                    text = extract_text_from_image(img_path)
-                    formatted_text = format_text(text)
+                    text_blocks = extract_text_from_image(img_path)
+                    formatted_text = process_and_match_text_blocks(text_blocks)
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
