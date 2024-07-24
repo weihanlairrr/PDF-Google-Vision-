@@ -205,7 +205,7 @@ def main():
 
                     text = extract_text_from_image(img_path)
                     formatted_text = format_text(text)
-                    data.append({"檔名": os.path.splitext(image_file)[0], "文字": formatted_text})
+                    data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
                     progress_bar.progress(progress)
