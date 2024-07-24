@@ -3,4 +3,3 @@ pymupdf
 google-cloud-vision
 pillow
 pandas
-opencv-python-headless
