@@ -4,8 +4,8 @@ import os
 import shutil
 import zipfile
 import pandas as pd
-import pytesseract
-from PIL import Image, ImageEnhance
+from google.cloud import vision
+from PIL import Image
 import io
 
 def create_directories():
@@ -98,20 +98,23 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     progress_bar.empty()
     progress_text.empty()
 
-# 定義圖像預處理函數
-def preprocess_image(img):
-    # 轉換為灰度圖像
-    img = img.convert('L')
-    # 增強對比度
-    enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(2)
-    return img
-
 # 定義文本格式化函數
 def format_text(text):
     lines = text.split('\n\n')
     formatted_lines = [line.strip() for line in lines if line.strip()]
     return '\n'.join(formatted_lines)
+
+# 使用 Google Vision API 提取文本
+def extract_text_from_image(img_path):
+    client = vision.ImageAnnotatorClient()
+    with io.open(img_path, 'rb') as image_file:
+        content = image_file.read()
+    image = vision.Image(content=content)
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    if texts:
+        return texts[0].description
+    return ""
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -132,8 +135,14 @@ def main():
 
     with st.sidebar:
         pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
-        csv_file = st.file_uploader("上傳CSV文件或Excel文件", type=["csv", "xlsx"])
-        language_option = st.radio("選擇提取文字的語言", ("繁體中文", "簡體中文"))
+        data_file = st.file_uploader("上傳CSV或Excel文件", type=["csv", "xlsx"])
+        json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
+
+    if json_file:
+        temp_json_path = os.path.join("temp", json_file.name)
+        with open(temp_json_path, "wb") as f:
+            f.write(json_file.getbuffer())
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
         height = st.text_area("指定截圖高度 (px)", placeholder="例如：255")
@@ -148,7 +157,7 @@ def main():
         height_map_str = st.text_area("輸入符號數量對應的截圖高度（格式：數量:高度，使用換行分隔）", placeholder="2:350\n3:240")
         height_map = {int(k): int(v) for k, v in (item.split(":") for item in height_map_str.split("\n") if item)}
 
-    if pdf_file and csv_file:
+    if pdf_file and data_file and json_file:
         if st.button("開始執行"):
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
@@ -158,21 +167,20 @@ def main():
             with open(pdf_path, "wb") as f:
                 f.write(pdf_file.getbuffer())
 
-            csv_path = os.path.join(temp_dir, csv_file.name)
-            with open(csv_path, "wb") as f:
-                f.write(csv_file.getbuffer())
+            data_path = os.path.join(temp_dir, data_file.name)
+            with open(data_path, "wb") as f:
+                f.write(data_file.getbuffer())
 
             try:
-                df = pd.read_csv(csv_path, encoding='utf-8')
+                if data_file.name.endswith('.csv'):
+                    df = pd.read_csv(data_path, encoding='utf-8')
+                else:
+                    df = pd.read_excel(data_path, engine='openpyxl')
             except UnicodeDecodeError:
-                try:
-                    df = pd.read_csv(csv_path, encoding='latin1')
-                except UnicodeDecodeError:
-                    try:
-                        df = pd.read_excel(csv_path)
-                    except Exception as e:
-                        st.error(f"無法讀取CSV或Excel文件: {e}")
-                        return
+                if data_file.name.endswith('.csv'):
+                    df = pd.read_csv(data_path, encoding='latin1')
+                else:
+                    df = pd.read_excel(data_path, engine='openpyxl')
 
             texts = df.iloc[:, 0].tolist()
 
@@ -194,13 +202,10 @@ def main():
                 for i, image_file in enumerate(image_files):
                     img_path = os.path.join(output_dir, image_file)
                     img = Image.open(img_path)
-                    img = preprocess_image(img)
 
-                    lang_option = 'chi_tra+eng' if language_option == "繁體中文" else 'chi_sim+eng'
-                    custom_config = r'--oem 3 --psm 6'
-                    text = pytesseract.image_to_string(img, lang=lang_option, config=custom_config)
+                    text = extract_text_from_image(img_path)
                     formatted_text = format_text(text)
-                    data.append({"檔名": os.path.splitext(image_file)[0], "文字": formatted_text})
+                    data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
                     progress_bar.progress(progress)
@@ -211,8 +216,8 @@ def main():
 
                 df_text = pd.DataFrame(data)
                 csv_buffer = io.StringIO()
-                df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  # 明確指定編碼為utf-8-sig
-                csv_data = csv_buffer.getvalue().encode('utf-8-sig')  # 明確指定編碼為utf-8-sig
+                df_text.to_csv(csv_buffer, index=False)
+                csv_data = csv_buffer.getvalue().encode('utf-8')
 
                 zipf.writestr("ocr_output.csv", csv_data)
 
