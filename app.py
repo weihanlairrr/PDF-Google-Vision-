@@ -123,11 +123,15 @@ if 'zip_file_ready' not in st.session_state:
     st.session_state.zip_file_ready = False
 if 'df_text' not in st.session_state:
     st.session_state.df_text = pd.DataFrame()
+if 'pdf_file' not in st.session_state:
+    st.session_state.pdf_file = None
+if 'data_file' not in st.session_state:
+    st.session_state.data_file = None
+if 'json_file' not in st.session_state:
+    st.session_state.json_file = None
 
 def main():
     create_directories()  # 確保必要的目錄存在
-
-    st.title("PDF截圖和文字提取工具")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -137,6 +141,17 @@ def main():
         pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
         data_file = st.file_uploader("上傳CSV或Excel文件", type=["csv", "xlsx"])
         json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
+
+    if pdf_file:
+        st.session_state.pdf_file = pdf_file
+    if data_file:
+        st.session_state.data_file = data_file
+    if json_file:
+        st.session_state.json_file = json_file
+
+    pdf_file = st.session_state.pdf_file
+    data_file = st.session_state.data_file
+    json_file = st.session_state.json_file
 
     if json_file:
         temp_json_path = os.path.join("temp", json_file.name)
@@ -153,8 +168,8 @@ def main():
                 st.error("高度必須是數字。")
                 return
     else:
-        symbol = st.text_input("輸入用來判斷截圖高度的符號", placeholder="例如：$")
-        height_map_str = st.text_area("輸入符號數量對應的截圖高度（格式：數量:高度，使用換行分隔）", placeholder="2:350\n3:240")
+        symbol = st.text_input("輸入用來判斷截圖高度的符號或文字", placeholder="例如：$")
+        height_map_str = st.text_area("輸入符號或文字數量對應的截圖高度（格式 -- 數量:高度，使用換行分隔）", placeholder="2:350\n3:240")
         height_map = {int(k): int(v) for k, v in (item.split(":") for item in height_map_str.split("\n") if item)}
 
     if pdf_file and data_file and json_file:
@@ -201,7 +216,6 @@ def main():
 
                 for i, image_file in enumerate(image_files):
                     img_path = os.path.join(output_dir, image_file)
-                    img = Image.open(img_path)
 
                     text = extract_text_from_image(img_path)
                     formatted_text = format_text(text)
@@ -235,6 +249,7 @@ def main():
             file_name="output.zip",
             mime="application/zip"
         )
+        st.balloons()
 
 if __name__ == "__main__":
     main()
