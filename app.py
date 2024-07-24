@@ -1,5 +1,5 @@
 import streamlit as st
-import fitz  # PyMuPDF
+import fitz 
 import os
 import shutil
 import zipfile
@@ -7,8 +7,6 @@ import pandas as pd
 from google.cloud import vision
 from PIL import Image, ImageEnhance
 import io
-import cv2
-import numpy as np
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -109,23 +107,6 @@ def preprocess_image(img):
     img = enhancer.enhance(2)
     return img
 
-# 使用OpenCV劃分區塊
-def extract_image_blocks(image_path):
-    image = cv2.imread(image_path)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edged = cv2.Canny(blurred, 50, 150)
-    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    blocks = []
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        if w > 50 and h > 50:  # 過濾掉小區塊
-            blocks.append((x, y, w, h))
-    
-    blocks = sorted(blocks, key=lambda b: (b[1], b[0]))  # 按照y座標和x座標排序
-    return blocks
-
 # 定義文本格式化函數
 def format_text(text):
     lines = text.split('\n\n')
@@ -141,8 +122,30 @@ def extract_text_from_image(img_path):
     response = client.text_detection(image=image)
     texts = response.text_annotations
     if texts:
-        return texts[0].description
-    return ""
+        return texts
+    return []
+
+# 自定義文本區塊處理和匹配
+def process_and_match_text_blocks(text_blocks):
+    # 假設文本區塊的第一個區塊是整體描述，其餘的是各個屬性和值
+    if not text_blocks:
+        return ""
+    
+    description = text_blocks[0].description
+    blocks = text_blocks[1:]
+
+    # 提取區塊位置和文本
+    block_data = [(block.bounding_poly.vertices, block.description) for block in blocks]
+    
+    # 根據位置對文本區塊排序並匹配
+    sorted_blocks = sorted(block_data, key=lambda x: (x[0][0].y, x[0][0].x))
+    formatted_text = ""
+    
+    for i in range(len(sorted_blocks)):
+        vertices, text = sorted_blocks[i]
+        formatted_text += f"{text}\n"
+    
+    return formatted_text.strip()
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -222,15 +225,8 @@ def main():
                     img = Image.open(img_path)
                     img = preprocess_image(img)
 
-                    # 使用OpenCV劃分區塊
-                    blocks = extract_image_blocks(img_path)
-                    block_texts = []
-                    for (x, y, w, h) in blocks:
-                        block_img = img.crop((x, y, x + w, y + h))
-                        block_text = extract_text_from_image(block_img)
-                        block_texts.append(block_text)
-                    
-                    formatted_text = format_text("\n".join(block_texts))
+                    text_blocks = extract_text_from_image(img_path)
+                    formatted_text = process_and_match_text_blocks(text_blocks)
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
