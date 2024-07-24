@@ -1,5 +1,5 @@
 import streamlit as st
-import fitz 
+import fitz  # PyMuPDF
 import os
 import shutil
 import zipfile
@@ -122,30 +122,8 @@ def extract_text_from_image(img_path):
     response = client.text_detection(image=image)
     texts = response.text_annotations
     if texts:
-        return texts
-    return []
-
-# 自定義文本區塊處理和匹配
-def process_and_match_text_blocks(text_blocks):
-    # 假設文本區塊的第一個區塊是整體描述，其餘的是各個屬性和值
-    if not text_blocks:
-        return ""
-    
-    description = text_blocks[0].description
-    blocks = text_blocks[1:]
-
-    # 提取區塊位置和文本
-    block_data = [(block.bounding_poly.vertices, block.description) for block in blocks]
-    
-    # 根據位置對文本區塊排序並匹配
-    sorted_blocks = sorted(block_data, key=lambda x: (x[0][0].y, x[0][0].x))
-    formatted_text = ""
-    
-    for i in range(len(sorted_blocks)):
-        vertices, text = sorted_blocks[i]
-        formatted_text += f"{text}\n"
-    
-    return formatted_text.strip()
+        return texts[0].description
+    return ""
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -225,8 +203,8 @@ def main():
                     img = Image.open(img_path)
                     img = preprocess_image(img)
 
-                    text_blocks = extract_text_from_image(img_path)
-                    formatted_text = process_and_match_text_blocks(text_blocks)
+                    text = extract_text_from_image(img_path)
+                    formatted_text = format_text(text)
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
