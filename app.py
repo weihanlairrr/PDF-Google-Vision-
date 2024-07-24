@@ -45,52 +45,29 @@ def rename_img(old_p, new_name):
     os.rename(old_p, new_p)
     return new_p
 
-# 定義搜尋文本並提取對應區域作為全頁寬度圖片的函數
-def search_extract_img(file, text, out_dir, h, offset=0):
-    res = search_pdf(file, text)
-    if res:
-        page_num, rect = res[0]
-        img_p = extract_img(file, page_num, rect, out_dir, h=h, offset=offset)
-        new_img_p = rename_img(img_p, f"{text}.png")
-        return page_num, new_img_p
-    return None, None
+# 定義從左到右、從上到下提取文字的函數
+def extract_text_blocks(file):
+    doc = fitz.open(file)
+    texts = []
+    for page in doc:
+        blocks = page.get_text("blocks")
+        blocks.sort(key=lambda b: (b[1], b[0]))  # 按照 y 坐標和 x 坐標排序
+        for b in blocks:
+            texts.append(b[4])
+    return texts
 
-# 定義搜尋多個文本並創建壓縮文件的函數，情況1
-def search_and_zip_case1(file, texts, h, out_dir, zipf):
+# 定義搜尋多個文本並創建壓縮文件的函數
+def search_and_zip(file, out_dir, zipf):
+    texts = extract_text_blocks(file)
     total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
 
     for i, text in enumerate(texts):
-        page_num, img_p = search_extract_img(file, text, out_dir, h=h)
+        page_num, img_p = search_extract_img(file, text, out_dir, h=60)
         if img_p:
             zipf.write(img_p, os.path.basename(img_p))
-        # 更新進度條
-        progress = (i + 1) / total_files
-        progress_bar.progress(progress)
-        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
-    progress_bar.empty()
-    progress_text.empty()
-
-# 定義搜尋多個文本並創建壓縮文件的函數，情況2
-def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
-    total_files = len(texts)
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
-    progress_text.text("準備載入PDF與CSV文件")
-    
-    for i, text in enumerate(texts):
-        res = search_pdf(file, text)
-        if res:
-            page_num, rect = res[0]
-            doc = fitz.open(file)
-            page = doc.load_page(page_num - 1)
-            symbol_count = len(page.search_for(symbol))
-            height = height_map.get(symbol_count, 240)
-            img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
-            new_img_p = rename_img(img_p, f"{text}.png")
-            zipf.write(new_img_p, os.path.basename(new_img_p))
         # 更新進度條
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
@@ -185,10 +162,7 @@ def main():
 
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                if option == "每頁商品數「固定」的情形":
-                    search_and_zip_case1(pdf_path, texts, height, output_dir, zipf)
-                else:
-                    search_and_zip_case2(pdf_path, texts, symbol, height_map, output_dir, zipf)
+                search_and_zip(pdf_path, output_dir, zipf)
 
                 image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                 data = []
