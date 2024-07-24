@@ -1,5 +1,6 @@
 streamlit
 pymupdf
 google-cloud-vision
+google-cloud-language
 pillow
 pandas
