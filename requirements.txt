@@ -1,5 +1,5 @@
 streamlit
-PyMuPDF
+pymupdf
+google-cloud-vision
+pillow
 pandas
-pytesseract
-Pillow
