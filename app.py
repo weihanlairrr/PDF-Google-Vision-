@@ -144,7 +144,7 @@ def main():
 
     with st.sidebar:
         pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
-        csv_file = st.file_uploader("上傳CSV文件", type=["csv"])
+        data_file = st.file_uploader("上傳CSV或Excel文件", type=["csv", "xlsx"])
         json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
 
     if json_file:
@@ -166,7 +166,7 @@ def main():
         height_map_str = st.text_area("輸入符號數量對應的截圖高度（格式：數量:高度，使用換行分隔）", placeholder="2:350\n3:240")
         height_map = {int(k): int(v) for k, v in (item.split(":") for item in height_map_str.split("\n") if item)}
 
-    if pdf_file and csv_file and json_file:
+    if pdf_file and data_file and json_file:
         if st.button("開始執行"):
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
@@ -176,11 +176,15 @@ def main():
             with open(pdf_path, "wb") as f:
                 f.write(pdf_file.getbuffer())
 
-            csv_path = os.path.join(temp_dir, csv_file.name)
-            with open(csv_path, "wb") as f:
-                f.write(csv_file.getbuffer())
+            data_path = os.path.join(temp_dir, data_file.name)
+            with open(data_path, "wb") as f:
+                f.write(data_file.getbuffer())
 
-            df = pd.read_csv(csv_path, encoding='utf-8')
+            if data_file.name.endswith('.csv'):
+                df = pd.read_csv(data_path, encoding='utf-8')
+            else:
+                df = pd.read_excel(data_path, engine='openpyxl')
+
             texts = df.iloc[:, 0].tolist()
 
             zip_buffer = io.BytesIO()
