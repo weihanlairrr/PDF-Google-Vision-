@@ -125,40 +125,6 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
-# 使用 Google Vision API 提取圖片中的所有文本區塊
-def extract_text_blocks_from_image(img_path):
-    client = vision.ImageAnnotatorClient()
-    with io.open(img_path, 'rb') as image_file:
-        content = image_file.read()
-    image = vision.Image(content=content)
-    response = client.text_detection(image=image)
-    return response.text_annotations
-
-# 解析並組合相應的文本區塊
-def parse_text_blocks(text_blocks):
-    result = {
-        "SIZES": "",
-        "FABRICS": "",
-        "面料": "",
-        "商品名稱": "",
-        "價格": ""
-    }
-
-    for block in text_blocks:
-        text = block.description
-        if "SIZES:" in text:
-            result["SIZES"] = text.split("SIZES:")[1].strip()
-        elif "FABRICS:" in text:
-            result["FABRICS"] = text.split("FABRICS:")[1].strip()
-        elif "面料:" in text:
-            result["面料"] = text.split("面料:")[1].strip()
-        elif "WOMEN'S" in text or "DRYVENT" in text:
-            result["商品名稱"] = text.strip()
-        elif "$" in text:
-            result["價格"] = text.strip()
-
-    return result
-
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
     st.session_state.zip_buffer = None
@@ -180,7 +146,6 @@ def main():
         pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
         csv_file = st.file_uploader("上傳CSV文件", type=["csv"])
         json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
-        image_file = st.file_uploader("上傳要處理的圖片", type=["png", "jpg", "jpeg"])
         language_option = st.radio("選擇提取文字的語言", ("繁體中文", "簡體中文"))
 
     if json_file:
@@ -271,18 +236,6 @@ def main():
             file_name="output.zip",
             mime="application/zip"
         )
-
-    if image_file:
-        image_path = os.path.join("temp", image_file.name)
-        with open(image_path, "wb") as f:
-            f.write(image_file.getbuffer())
-
-        text_blocks = extract_text_blocks_from_image(image_path)
-        parsed_text = parse_text_blocks(text_blocks)
-
-        st.write("提取結果:")
-        for key, value in parsed_text.items():
-            st.write(f"{key}: {value}")
 
 if __name__ == "__main__":
     main()
