@@ -7,6 +7,8 @@ import pandas as pd
 from google.cloud import vision
 from PIL import Image, ImageEnhance
 import io
+import cv2
+import numpy as np
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -107,6 +109,23 @@ def preprocess_image(img):
     img = enhancer.enhance(2)
     return img
 
+# 使用OpenCV劃分區塊
+def extract_image_blocks(image_path):
+    image = cv2.imread(image_path)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edged = cv2.Canny(blurred, 50, 150)
+    contours, _ = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    blocks = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if w > 50 and h > 50:  # 過濾掉小區塊
+            blocks.append((x, y, w, h))
+    
+    blocks = sorted(blocks, key=lambda b: (b[1], b[0]))  # 按照y座標和x座標排序
+    return blocks
+
 # 定義文本格式化函數
 def format_text(text):
     lines = text.split('\n\n')
@@ -203,8 +222,15 @@ def main():
                     img = Image.open(img_path)
                     img = preprocess_image(img)
 
-                    text = extract_text_from_image(img_path)
-                    formatted_text = format_text(text)
+                    # 使用OpenCV劃分區塊
+                    blocks = extract_image_blocks(img_path)
+                    block_texts = []
+                    for (x, y, w, h) in blocks:
+                        block_img = img.crop((x, y, x + w, y + h))
+                        block_text = extract_text_from_image(block_img)
+                        block_texts.append(block_text)
+                    
+                    formatted_text = format_text("\n".join(block_texts))
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
