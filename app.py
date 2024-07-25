@@ -238,7 +238,11 @@ def main():
         symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$")
         col1, col2 = st.columns([1,1.9])
         height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300,help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        height_map = {int(k): int(v) for k, v in (item.split(":") for item in height_map_str.split("\n") if item)}
+        height_map = {}
+        for item in height_map_str.split("\n"):
+            if ":" in item:
+                k, v = item.split(":")
+                height_map[int(k.strip())] = int(v.strip())
         user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300)
         st.session_state.symbol = symbol
         st.session_state.height_map = height_map
@@ -355,6 +359,7 @@ def main():
         total_cost_twd = usd_to_twd(total_cost_usd)
             
         st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
+        st.divider()
         col1,col2,col3 =st.columns(3)
         with col1:
             ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個 Tokens", key="card1")
