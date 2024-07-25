@@ -13,6 +13,9 @@ import tiktoken
 import streamlit.components.v1 as components
 from py_currency_converter import convert
 
+st.image("Image/flow.png")
+st.write("\n")
+
 with st.sidebar:
     st.markdown(
         """
