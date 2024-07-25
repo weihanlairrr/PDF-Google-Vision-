@@ -332,7 +332,7 @@ def main():
                     
                     progress = (i + 1) / total_files
                     progress_bar.progress(progress)
-                    progress_text.text(f"正在提取圖片文字: {image_file} ({i + 1}/{total_files})")
+                    progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({i + 1}/{total_files})")
 
                 progress_bar.empty()
                 progress_text.empty()
