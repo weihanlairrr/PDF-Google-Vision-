@@ -370,40 +370,13 @@ def main():
         st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
         st.divider()
         col1,col2,col3 =st.columns(3)
-        background_color = "#F7C325"
         with col1:
-            st.markdown(f"""
-                <style>
-                .metric-card {{ background-color: {background_color}; border-radius: 5px; padding: 10px; }}
-                </style>
-                <div class="metric-card">
-                    <h3>Input Tokens</h3>
-                    <p>{st.session_state.total_input_tokens} 個</p>
-                    <p style="font-size: 12px;">US$0.15 / 每百萬個Tokens</p>
-                </div>
-            """, unsafe_allow_html=True)
+            ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
         with col2:
-            st.markdown(f"""
-                <style>
-                .metric-card {{ background-color: {background_color}; border-radius: 5px; padding: 10px; }}
-                </style>
-                <div class="metric-card">
-                    <h3>Output Tokens</h3>
-                    <p>{st.session_state.total_output_tokens} 個</p>
-                    <p style="font-size: 12px;">US$0.60 / 每百萬個Tokens</p>
-                </div>
-            """, unsafe_allow_html=True)
+            ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
         with col3:
-            st.markdown(f"""
-                <style>
-                .metric-card {{ background-color: {background_color}; border-radius: 5px; padding: 10px; }}
-                </style>
-                <div class="metric-card">
-                    <h3>本次執行費用</h3>
-                    <p>${total_cost_twd:.2f} 台幣</p>
-                    <p style="font-size: 12px;">根據即時匯率</p>
-                </div>
-            """, unsafe_allow_html=True)
+            ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
+            
         with st.container(height=400):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
