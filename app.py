@@ -5,8 +5,42 @@ import shutil
 import zipfile
 import pandas as pd
 from google.cloud import vision
-from PIL import Image
 import io
+from openai import OpenAI
+import streamlit_shadcn_ui as ui
+import base64
+import tiktoken
+import streamlit.components.v1 as components
+from py_currency_converter import convert
+
+with st.sidebar:
+    st.markdown(
+        """
+        <style>
+        .stTextInput, .stTextArea {
+            box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            border: none;
+        }
+        [data-testid='stFileUploader'] {
+            width: 80%;
+        }
+        [data-testid='stFileUploader'] section {
+            padding: 0;
+            float: left;
+        }
+        [data-testid='stFileUploader'] section > input + div {
+            display: none;
+        }
+        [data-testid='stFileUploader'] section + div {
+            float: left;
+            padding-top: 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -116,6 +150,31 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
+def trigger_download(zip_buffer, filename):
+    b64 = base64.b64encode(zip_buffer).decode()
+    components.html(f"""
+        <html>
+        <head>
+        <script type="text/javascript">
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                var link = document.createElement("a");
+                link.href = "data:application/zip;base64,{b64}";
+                link.download = "{filename}";
+                link.click();
+            }}
+        </script>
+        </head>
+        </html>
+    """, height=0)
+
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
     st.session_state.zip_buffer = None
@@ -129,18 +188,26 @@ if 'data_file' not in st.session_state:
     st.session_state.data_file = None
 if 'json_file' not in st.session_state:
     st.session_state.json_file = None
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = ""
+if 'height' not in st.session_state:
+    st.session_state.height = ""
+if 'symbol' not in st.session_state:
+    st.session_state.symbol = ""
+if 'height_map' not in st.session_state:
+    st.session_state.height_map = {}
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
 
 def main():
-    create_directories()  # 確保必要的目錄存在
-
-    col1, col2 = st.columns(2)
-    with col1:
-        option = st.radio("選擇情況", ("每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"), label_visibility="collapsed")
+    create_directories() 
+    option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
 
     with st.sidebar:
         pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
         data_file = st.file_uploader("上傳CSV或Excel文件", type=["csv", "xlsx"])
         json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
+        api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
     if pdf_file:
         st.session_state.pdf_file = pdf_file
@@ -148,10 +215,13 @@ def main():
         st.session_state.data_file = data_file
     if json_file:
         st.session_state.json_file = json_file
+    if api_key:
+        st.session_state.api_key = api_key
 
     pdf_file = st.session_state.pdf_file
     data_file = st.session_state.data_file
     json_file = st.session_state.json_file
+    api_key = st.session_state.api_key
 
     if json_file:
         temp_json_path = os.path.join("temp", json_file.name)
@@ -160,23 +230,55 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
-        height = st.text_area("指定截圖高度 (px)", placeholder="例如：255")
-        if height:
-            try:
-                height = int(height)
-            except ValueError:
-                st.error("高度必須是數字。")
-                return
+        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255",help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300)
+        st.session_state.height = height
+        st.session_state.user_input = user_input
     else:
-        symbol = st.text_input("輸入用來判斷截圖高度的符號或文字", placeholder="例如：$")
-        height_map_str = st.text_area("輸入符號或文字數量對應的截圖高度（格式 -- 數量:高度，使用換行分隔）", placeholder="2:350\n3:240")
+        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$")
+        col1, col2 = st.columns([1,1.9])
+        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300,help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
         height_map = {int(k): int(v) for k, v in (item.split(":") for item in height_map_str.split("\n") if item)}
-
-    if pdf_file and data_file and json_file:
-        if st.button("開始執行"):
+        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300)
+        st.session_state.symbol = symbol
+        st.session_state.height_map = height_map
+        st.session_state.user_input = user_input
+    
+    def organize_text_with_gpt(text, api_key):
+        client = OpenAI(api_key=api_key)
+        prompt = f"'''{text} '''{st.session_state.user_input}"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+        )
+        
+        # 使用 tiktoken 計算 tokens 數量
+        encoding = tiktoken.encoding_for_model("gpt-4")
+        input_tokens = len(encoding.encode(prompt))
+        output_tokens = len(encoding.encode(response.choices[0].message.content))
+        
+        # 將 tokens 計數存入 session_state
+        if 'total_input_tokens' not in st.session_state:
+            st.session_state.total_input_tokens = 0
+        if 'total_output_tokens' not in st.session_state:
+            st.session_state.total_output_tokens = 0
+            
+        st.session_state.total_input_tokens += input_tokens
+        st.session_state.total_output_tokens += output_tokens
+        
+        return response.choices[0].message.content
+    
+    
+    # 檢查所有必需字段是否已填寫
+    all_fields_filled = pdf_file and data_file and json_file and api_key and st.session_state.user_input and ((option == "每頁商品數「固定」的情形" and st.session_state.height) or (option == "每頁商品數「不固定」的情形" and st.session_state.symbol and st.session_state.height_map))
+    
+    if all_fields_filled:
+        if ui.button("開始執行", key="run_btn"):
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
-            clear_directory(output_dir)  # 清空 output 目錄
+            clear_directory(output_dir)  
 
             pdf_path = os.path.join(temp_dir, pdf_file.name)
             with open(pdf_path, "wb") as f:
@@ -202,9 +304,9 @@ def main():
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                 if option == "每頁商品數「固定」的情形":
-                    search_and_zip_case1(pdf_path, texts, height, output_dir, zipf)
+                    search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf)
                 else:
-                    search_and_zip_case2(pdf_path, texts, symbol, height_map, output_dir, zipf)
+                    search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
 
                 image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                 data = []
@@ -218,7 +320,8 @@ def main():
                     img_path = os.path.join(output_dir, image_file)
 
                     text = extract_text_from_image(img_path)
-                    formatted_text = format_text(text)
+                    organized_text = organize_text_with_gpt(text, api_key)  
+                    formatted_text = format_text(organized_text)
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
                     
                     progress = (i + 1) / total_files
@@ -241,15 +344,29 @@ def main():
             st.session_state.zip_file_ready = True
             st.session_state.df_text = df_text
 
-    if st.session_state.zip_file_ready and st.session_state.zip_buffer:
-        st.dataframe(st.session_state.df_text)
-        st.download_button(
-            label="下載圖片和文字ZIP文件",
-            data=st.session_state.zip_buffer,
-            file_name="output.zip",
-            mime="application/zip"
-        )
-        st.balloons()
+    if st.session_state.zip_file_ready and st.session_state.zip_buffer:  
+        def usd_to_twd(usd_amount):
+            result = convert(base='USD', amount=usd_amount, to=['TWD'])
+            return result['TWD']
+
+        input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
+        output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
+        total_cost_usd = input_cost + output_cost
+        total_cost_twd = usd_to_twd(total_cost_usd)
+            
+        st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
+        col1,col2,col3 =st.columns(3)
+        with col1:
+            ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個 Tokens", key="card1")
+        with col2:
+            ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個 Tokens", key="card2")
+        with col3:
+            ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
+            
+        with st.container(height=400):
+            st.write("##### 成果預覽")
+            ui.table(st.session_state.df_text)
+        trigger_download(st.session_state.zip_buffer, "output.zip")
 
 if __name__ == "__main__":
     main()
