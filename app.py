@@ -13,9 +13,6 @@ import tiktoken
 import streamlit.components.v1 as components
 from py_currency_converter import convert
 
-st.image("Image/flow.png")
-st.write("\n")
-
 with st.sidebar:
     st.markdown(
         """
@@ -203,7 +200,7 @@ def main():
     option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
 
     with st.sidebar:
-        st.image("Image/91APP_logo.png")
+        st.image("/Image/91APP_logo.png")
         with st.expander("文件上傳"):
             pdf_file = st.file_uploader("上傳 PDF", type=["pdf"])
             data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"])
