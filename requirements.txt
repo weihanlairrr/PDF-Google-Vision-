@@ -1,5 +1,8 @@
 streamlit
 pymupdf
-google-cloud-vision
-pillow
 pandas
+google-cloud-vision
+openai
+streamlit-shadcn-ui
+tiktoken
+py-currency-converter
