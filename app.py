@@ -26,9 +26,16 @@ with st.sidebar:
             border: none;
         }
         [data-testid='stFileUploader'] {
-            width: 80%;
+            width: 90%;
+        }
+        [data-testid='stFileUploader'] section button {
+            background-color: black !important;
+            color: white !important;
+            border-radius: 5px;
         }
         [data-testid='stFileUploader'] section {
+            background: black !important;
+            color: black !important;
             padding: 0;
             float: left;
         }
