@@ -207,7 +207,7 @@ def main():
         with st.expander("文件上傳"):
             pdf_file = st.file_uploader("上傳 PDF", type=["pdf"])
             data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"])
-            json_file = st.file_uploader("上傳 JSON 憑證", type=["json"])
+            json_file = st.file_uploader("上傳 Google Cloud JSON 憑證", type=["json"])
         st.write("\n")
         api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
