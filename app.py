@@ -32,10 +32,6 @@ with st.sidebar:
         [data-testid='stFileUploader'] section > input + div {
             display: none;
         }
-        [data-testid='stFileUploader'] section + div {
-            float: left;
-            padding-top: 0;
-        }
         </style>
         """,
         unsafe_allow_html=True
@@ -204,9 +200,11 @@ def main():
     option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
 
     with st.sidebar:
-        pdf_file = st.file_uploader("上傳PDF文件", type=["pdf"])
-        data_file = st.file_uploader("上傳CSV或Excel文件", type=["csv", "xlsx"])
-        json_file = st.file_uploader("上傳JSON憑證文件", type=["json"])
+        with st.expander("文件上傳"):
+            pdf_file = st.file_uploader("上傳 PDF", type=["pdf"])
+            data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"])
+            json_file = st.file_uploader("上傳 JSON 憑證", type=["json"])
+        st.write("\n")
         api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
     if pdf_file:
