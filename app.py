@@ -204,10 +204,6 @@ if 'height_map' not in st.session_state:
     st.session_state.height_map = {}
 if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
-if 'total_input_tokens' not in st.session_state:
-    st.session_state.total_input_tokens = 0
-if 'total_output_tokens' not in st.session_state:
-    st.session_state.total_output_tokens = 0
 
 def main():
     create_directories() 
@@ -277,6 +273,11 @@ def main():
         output_tokens = len(encoding.encode(response.choices[0].message.content))
         
         # 將 tokens 計數存入 session_state
+        if 'total_input_tokens' not in st.session_state:
+            st.session_state.total_input_tokens = 0
+        if 'total_output_tokens' not in st.session_state:
+            st.session_state.total_output_tokens = 0
+            
         st.session_state.total_input_tokens += input_tokens
         st.session_state.total_output_tokens += output_tokens
         
@@ -288,13 +289,6 @@ def main():
     
     if all_fields_filled:
         if ui.button("開始執行", key="run_btn"):
-            # 重設狀態變數，避免重複觸發
-            st.session_state.zip_buffer = None
-            st.session_state.zip_file_ready = False
-            st.session_state.df_text = pd.DataFrame()
-            st.session_state.total_input_tokens = 0
-            st.session_state.total_output_tokens = 0
-
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
             clear_directory(output_dir)  
@@ -352,7 +346,7 @@ def main():
 
                 df_text = pd.DataFrame(data)
                 csv_buffer = io.StringIO()
-                df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  # 使用utf-8-sig編碼
+                df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
                 csv_data = csv_buffer.getvalue().encode('utf-8-sig')
 
                 zipf.writestr("ocr_output.csv", csv_data)
