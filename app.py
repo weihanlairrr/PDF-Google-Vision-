@@ -200,6 +200,8 @@ if 'height' not in st.session_state:
     st.session_state.height = ""
 if 'symbol' not in st.session_state:
     st.session_state.symbol = ""
+if 'height_map_str' not in st.session_state:
+    st.session_state.height_map_str = ""
 if 'height_map' not in st.session_state:
     st.session_state.height_map = {}
 if 'user_input' not in st.session_state:
@@ -243,21 +245,22 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
-        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255",help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300)
+        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input)
         st.session_state.height = height
         st.session_state.user_input = user_input
     else:
-        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$")
+        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol)
         col1, col2 = st.columns([1,1.9])
-        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300,help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
         height_map = {}
         for item in height_map_str.split("\n"):
             if ":" in item:
                 k, v = item.split(":")
                 height_map[int(k.strip())] = int(v.strip())
-        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300)
+        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input)
         st.session_state.symbol = symbol
+        st.session_state.height_map_str = height_map_str
         st.session_state.height_map = height_map
         st.session_state.user_input = user_input
     
