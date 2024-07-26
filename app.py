@@ -377,10 +377,14 @@ def main():
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
             
-        with st.container(height=400):
+        with st.container(height=500):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         trigger_download(st.session_state.zip_buffer, "output.zip")
+        
+        # 重設狀態變數，避免重複觸發
+        st.session_state.zip_file_ready = False
+        st.session_state.zip_buffer = None
 
 if __name__ == "__main__":
     main()
