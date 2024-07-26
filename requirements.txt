@@ -1,8 +1,9 @@
 streamlit
-pymupdf
+PyMuPDF
 pandas
 google-cloud-vision
+aiohttp
 openai
-streamlit-shadcn-ui
 tiktoken
-py-currency-converter
+py_currency_converter
+streamlit_shadcn_ui
