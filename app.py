@@ -4,16 +4,17 @@ import os
 import shutil
 import zipfile
 import pandas as pd
-from google.cloud import vision
 import io
 import aiohttp
 import asyncio
 import concurrent.futures
-from openai import OpenAI
-import streamlit_shadcn_ui as ui
 import base64
 import tiktoken
+import streamlit_shadcn_ui as ui
 import streamlit.components.v1 as components
+
+from openai import OpenAI
+from google.cloud import vision
 from py_currency_converter import convert
 
 st.image("Image/flow.png")
@@ -198,7 +199,6 @@ async def process_texts(api_key, texts, prompt, batch_size=10):
                     yield {"貨號": text, "商品資料": formatted_text}
 
 def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, user_input):
-    total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
