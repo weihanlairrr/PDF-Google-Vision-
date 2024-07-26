@@ -170,8 +170,6 @@ if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'download_triggered' not in st.session_state:
     st.session_state.download_triggered = False
-if 'show_results' not in st.session_state:
-    st.session_state.show_results = False
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -331,7 +329,6 @@ def main():
         if ui.button("開始執行", key="run_btn"):
             st.session_state.task_completed = False
             st.session_state.download_triggered = False
-            st.session_state.show_results = False  # 新增這行以重置顯示狀態
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
             clear_directory(output_dir)  
@@ -404,34 +401,32 @@ def main():
             st.session_state.zip_file_ready = True
             st.session_state.df_text = df_text
             st.session_state.task_completed = True
-            st.session_state.show_results = True  # 任務完成後顯示結果
 
-    if st.session_state.show_results:
-        if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
-            def usd_to_twd(usd_amount):
-                result = convert(base='USD', amount=usd_amount, to=['TWD'])
-                return result['TWD']
+    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
+        def usd_to_twd(usd_amount):
+            result = convert(base='USD', amount=usd_amount, to=['TWD'])
+            return result['TWD']
 
-            input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
-            output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
-            total_cost_usd = input_cost + output_cost
-            total_cost_twd = usd_to_twd(total_cost_usd)
-                
-            st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
-            st.divider()
-            col1,col2,col3 =st.columns(3)
-            with col1:
-                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-            with col2:
-                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-            with col3:
-                ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
-                
-            with st.container(height=400):
-                st.write("##### 成果預覽")
-                ui.table(st.session_state.df_text)
-            trigger_download(st.session_state.zip_buffer, "output.zip")
-            st.session_state.download_triggered = True
+        input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
+        output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
+        total_cost_usd = input_cost + output_cost
+        total_cost_twd = usd_to_twd(total_cost_usd)
+            
+        st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
+        st.divider()
+        col1,col2,col3 =st.columns(3)
+        with col1:
+            ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
+        with col2:
+            ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
+        with col3:
+            ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
+            
+        with st.container(height=400):
+            st.write("##### 成果預覽")
+            ui.table(st.session_state.df_text)
+        trigger_download(st.session_state.zip_buffer, "output.zip")
+        st.session_state.download_triggered = True
 
 if __name__ == "__main__":
     main()
