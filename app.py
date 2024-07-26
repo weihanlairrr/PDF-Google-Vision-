@@ -204,6 +204,10 @@ if 'height_map' not in st.session_state:
     st.session_state.height_map = {}
 if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
+if 'task_completed' not in st.session_state:
+    st.session_state.task_completed = False
+if 'download_triggered' not in st.session_state:
+    st.session_state.download_triggered = False
 
 def main():
     create_directories() 
@@ -289,6 +293,8 @@ def main():
     
     if all_fields_filled:
         if ui.button("開始執行", key="run_btn"):
+            st.session_state.task_completed = False
+            st.session_state.download_triggered = False
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
             clear_directory(output_dir)  
@@ -356,8 +362,9 @@ def main():
             st.session_state.zip_buffer = zip_buffer.getvalue()
             st.session_state.zip_file_ready = True
             st.session_state.df_text = df_text
+            st.session_state.task_completed = True
 
-    if st.session_state.zip_file_ready and st.session_state.zip_buffer:  
+    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
             return result['TWD']
@@ -381,6 +388,7 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         trigger_download(st.session_state.zip_buffer, "output.zip")
+        st.session_state.download_triggered = True
 
 if __name__ == "__main__":
     main()
