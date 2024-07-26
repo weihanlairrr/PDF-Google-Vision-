@@ -34,7 +34,7 @@ with st.sidebar:
             border-radius: 5px;
         }
         [data-testid='stFileUploader'] section {
-            background: black !重要 !important;
+            background: black !important;
             color: black !important;
             padding: 0;
             float: left;
@@ -46,7 +46,6 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -208,10 +207,14 @@ if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'download_triggered' not in st.session_state:
     st.session_state.download_triggered = False
+if 'current_tab' not in st.session_state:
+    st.session_state.current_tab = "每頁商品數「固定」的情形"
 
 def main():
-    create_directories() 
-    option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
+    create_directories()
+    
+    option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value=st.session_state.current_tab)
+    st.session_state.current_tab = option
 
     with st.sidebar:
         st.image("Image/91APP_logo.png")
@@ -243,24 +246,24 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
-        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255",help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300)
+        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.get('height', ''), help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.get('user_input', ''))
         st.session_state.height = height
         st.session_state.user_input = user_input
     else:
-        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$")
-        col1, col2 = st.columns([1,1.9])
-        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300,help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.get('symbol', ''))
+        col1, col2 = st.columns([1, 1.9])
+        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value='\n'.join([f'{k}:{v}' for k, v in st.session_state.get('height_map', {}).items()]), help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
         height_map = {}
         for item in height_map_str.split("\n"):
             if ":" in item:
                 k, v = item.split(":")
                 height_map[int(k.strip())] = int(v.strip())
-        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300)
+        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.get('user_input', ''))
         st.session_state.symbol = symbol
         st.session_state.height_map = height_map
         st.session_state.user_input = user_input
-    
+
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
         prompt = f"'''{text} '''{st.session_state.user_input}"
@@ -270,34 +273,33 @@ def main():
                 {"role": "user", "content": prompt}
             ],
         )
-        
+
         # 使用 tiktoken 計算 tokens 數量
         encoding = tiktoken.encoding_for_model("gpt-4")
         input_tokens = len(encoding.encode(prompt))
         output_tokens = len(encoding.encode(response.choices[0].message.content))
-        
+
         # 將 tokens 計數存入 session_state
         if 'total_input_tokens' not in st.session_state:
             st.session_state.total_input_tokens = 0
         if 'total_output_tokens' not in st.session_state:
             st.session_state.total_output_tokens = 0
-            
+
         st.session_state.total_input_tokens += input_tokens
         st.session_state.total_output_tokens += output_tokens
-        
+
         return response.choices[0].message.content
-    
-    
+
     # 檢查所有必需字段是否已填寫
     all_fields_filled = pdf_file and data_file and json_file and api_key and st.session_state.user_input and ((option == "每頁商品數「固定」的情形" and st.session_state.height) or (option == "每頁商品數「不固定」的情形" and st.session_state.symbol and st.session_state.height_map))
-    
+
     if all_fields_filled:
         if ui.button("開始執行", key="run_btn"):
             st.session_state.task_completed = False
             st.session_state.download_triggered = False
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
-            clear_directory(output_dir)  
+            clear_directory(output_dir)
 
             pdf_path = os.path.join(temp_dir, pdf_file.name)
             with open(pdf_path, "wb") as f:
@@ -339,10 +341,10 @@ def main():
                     img_path = os.path.join(output_dir, image_file)
 
                     text = extract_text_from_image(img_path)
-                    organized_text = organize_text_with_gpt(text, api_key)  
+                    organized_text = organize_text_with_gpt(text, api_key)
                     formatted_text = format_text(organized_text)
                     data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
-                    
+
                     progress = (i + 1) / total_files
                     progress_bar.progress(progress)
                     progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({i + 1}/{total_files})")
@@ -352,7 +354,7 @@ def main():
 
                 df_text = pd.DataFrame(data)
                 csv_buffer = io.StringIO()
-                df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
+                df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
                 csv_data = csv_buffer.getvalue().encode('utf-8-sig')
 
                 zipf.writestr("ocr_output.csv", csv_data)
@@ -373,17 +375,17 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-            
+
         st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
         st.divider()
-        col1,col2,col3 =st.columns(3)
+        col1, col2, col3 = st.columns(3)
         with col1:
             ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
         with col2:
             ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
-            
+
         with st.container(height=400):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
