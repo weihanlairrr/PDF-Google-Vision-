@@ -6,6 +6,9 @@ import zipfile
 import pandas as pd
 from google.cloud import vision
 import io
+import aiohttp
+import asyncio
+import concurrent.futures
 from openai import OpenAI
 import streamlit_shadcn_ui as ui
 import base64
@@ -95,49 +98,6 @@ def search_extract_img(file, text, out_dir, h, offset=0):
         return page_num, new_img_p
     return None, None
 
-# 定義搜尋多個文本並創建壓縮文件的函數，情況1
-def search_and_zip_case1(file, texts, h, out_dir, zipf):
-    total_files = len(texts)
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
-    progress_text.text("準備載入PDF與CSV文件")
-
-    for i, text in enumerate(texts):
-        page_num, img_p = search_extract_img(file, text, out_dir, h=h)
-        if img_p:
-            zipf.write(img_p, os.path.basename(img_p))
-        # 更新進度條
-        progress = (i + 1) / total_files
-        progress_bar.progress(progress)
-        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
-    progress_bar.empty()
-    progress_text.empty()
-
-# 定義搜尋多個文本並創建壓縮文件的函數，情況2
-def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
-    total_files = len(texts)
-    progress_bar = st.progress(0)
-    progress_text = st.empty()
-    progress_text.text("準備載入PDF與CSV文件")
-    
-    for i, text in enumerate(texts):
-        res = search_pdf(file, text)
-        if res:
-            page_num, rect = res[0]
-            doc = fitz.open(file)
-            page = doc.load_page(page_num - 1)
-            symbol_count = len(page.search_for(symbol))
-            height = height_map.get(symbol_count, 240)
-            img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
-            new_img_p = rename_img(img_p, f"{text}.png")
-            zipf.write(new_img_p, os.path.basename(new_img_p))
-        # 更新進度條
-        progress = (i + 1) / total_files
-        progress_bar.progress(progress)
-        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
-    progress_bar.empty()
-    progress_text.empty()
-
 # 定義文本格式化函數
 def format_text(text):
     lines = text.split('\n\n')
@@ -210,6 +170,77 @@ if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'download_triggered' not in st.session_state:
     st.session_state.download_triggered = False
+
+async def fetch_gpt_response(session, api_key, text, prompt):
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": prompt.format(text)}]
+    }
+    async with session.post(url, headers=headers, json=payload) as response:
+        return await response.json()
+
+async def process_texts(api_key, texts, prompt, batch_size=10):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            tasks.extend([fetch_gpt_response(session, api_key, text, prompt) for text in batch])
+            if tasks:
+                results = await asyncio.gather(*tasks)
+                for result, text in zip(results, batch):
+                    organized_text = result['choices'][0]['message']['content']
+                    formatted_text = format_text(organized_text)
+                    yield {"貨號": text, "商品資料": formatted_text}
+
+def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, user_input):
+    total_files = len(texts)
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    progress_text.text("準備載入PDF與CSV文件")
+
+    async def main():
+        data = []
+        async for item in process_texts(api_key, texts, user_input):
+            data.append(item)
+        df_text = pd.DataFrame(data)
+        csv_buffer = io.StringIO()
+        df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
+        csv_data = csv_buffer.getvalue().encode('utf-8-sig')
+        zipf.writestr("ocr_output.csv", csv_data)
+        progress_bar.empty()
+        progress_text.empty()
+
+    asyncio.run(main())
+
+# 定義搜尋多個文本並創建壓縮文件的函數，情況2
+def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
+    total_files = len(texts)
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    progress_text.text("準備載入PDF與CSV文件")
+    
+    for i, text in enumerate(texts):
+        res = search_pdf(file, text)
+        if res:
+            page_num, rect = res[0]
+            doc = fitz.open(file)
+            page = doc.load_page(page_num - 1)
+            symbol_count = len(page.search_for(symbol))
+            height = height_map.get(symbol_count, 240)
+            img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
+            new_img_p = rename_img(img_p, f"{text}.png")
+            zipf.write(new_img_p, os.path.basename(new_img_p))
+        # 更新進度條
+        progress = (i + 1) / total_files
+        progress_bar.progress(progress)
+        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
+    progress_bar.empty()
+    progress_text.empty()
 
 def main():
     create_directories() 
@@ -326,7 +357,7 @@ def main():
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                 if option == "每頁商品數「固定」的情形":
-                    search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf)
+                    search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
                 else:
                     search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
 
@@ -338,17 +369,21 @@ def main():
                 progress_text = st.empty()
                 progress_text.text("準備載入截圖")
 
-                for i, image_file in enumerate(image_files):
-                    img_path = os.path.join(output_dir, image_file)
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    futures = {executor.submit(extract_text_from_image, os.path.join(output_dir, image_file)): image_file for image_file in image_files}
+                    for future in concurrent.futures.as_completed(futures):
+                        image_file = futures[future]
+                        try:
+                            text = future.result()
+                            organized_text = organize_text_with_gpt(text, api_key)
+                            formatted_text = format_text(organized_text)
+                            data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
+                        except Exception as exc:
+                            print(f'{image_file} generated an exception: {exc}')
 
-                    text = extract_text_from_image(img_path)
-                    organized_text = organize_text_with_gpt(text, api_key)  
-                    formatted_text = format_text(organized_text)
-                    data.append({"貨號": os.path.splitext(image_file)[0], "商品資料": formatted_text})
-                    
-                    progress = (i + 1) / total_files
-                    progress_bar.progress(progress)
-                    progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({i + 1}/{total_files})")
+                        progress = len(data) / total_files
+                        progress_bar.progress(progress)
+                        progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({len(data)}/{total_files})")
 
                 progress_bar.empty()
                 progress_text.empty()
@@ -387,7 +422,7 @@ def main():
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
             
-        with st.container(height=500):
+        with st.container(height=400):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         trigger_download(st.session_state.zip_buffer, "output.zip")
