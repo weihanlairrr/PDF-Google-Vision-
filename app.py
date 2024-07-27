@@ -16,6 +16,8 @@ import streamlit.components.v1 as components
 from openai import OpenAI
 from google.cloud import vision
 from py_currency_converter import convert
+from streamlit_extras.stylable_container import stylable_container
+from streamlit_option_menu import option_menu
 
 with st.sidebar:
     st.markdown(
@@ -26,28 +28,29 @@ with st.sidebar:
             border-radius: 5px;
             border: none;
         }
-        [data-testid='stFileUploader'] {
-            width: 90%;
-        }
+
         [data-testid='stFileUploader'] section button {
-            background-color: black !important;
+            background-color: #46474A !important;
             color: white !important;
             border-radius: 5px;
+            border: none;
         }
         [data-testid='stFileUploader'] section {
-            background: black!important;
+            background: #46474A !important;
             color: black !important;
             padding: 0;
-            float: left;
+        ;
         }
         [data-testid='stFileUploader'] section > input + div {
             display: none;
+        }
+        [data-testid=stSidebar] {
+            background: #f5f5f5;
         }
         </style>
         """,
         unsafe_allow_html=True
     )
-
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -258,23 +261,54 @@ def update_height_map_str():
         st.session_state['height_map_str'] = st.session_state['height_map_str_input']
         height_map = {}
         for item in st.session_state['height_map_str'].split("\n"):
-            if ":" in item:
+            if ":" in item: 
                 k, v = item.split(":")
                 height_map[int(k.strip())] = int(v.strip())
         st.session_state['height_map'] = height_map
 
 def main():
     create_directories() 
-    option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
-
+    
     with st.sidebar:
         st.image("Image/91APP_logo.png")
-        with st.expander("文件上傳"):
-            pdf_file = st.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader")
-            data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
-            json_file = st.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
+        selected = option_menu("",
+        ["每頁商品數固定",'每頁商品數不固定'],
+        icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
+        styles={
+            "container": {"padding": "0!important", "background": "#F5F5F5","border-radius": "0px"},
+            "icon": {"color": "#FF8C00", "font-size": "17px"},
+            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"5px", "--hover-color": "#8EBDCD"},
+            "nav-link-selected": {"background": "#8EBDCD", "color": "#200"},
+        }
+    )
+        with stylable_container(
+            key="green_popover",
+            css_styles="""
+                button {
+                    background: #46474A;
+                    color: white;
+                    border-radius: 10px;
+                    border: none;
+                    width: 100%;
+                }
+                """,
+            ):
+            st.divider()
+            popover = st.popover("文件上傳")
+                 
+        pdf_file = popover.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader")
+        data_file = popover.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+        json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
         st.write("\n")
-        api_key = st.text_input("輸入 OpenAI API Key", type="password")
+        with stylable_container(
+            key="text_input_styles",
+            css_styles="""
+                label {
+                    color: #46474a;
+                }
+                """
+            ):
+            api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
     # 將已上傳的文件存入 session state
     if pdf_file:
@@ -298,7 +332,7 @@ def main():
             f.write(json_file.getbuffer())
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
-    if option == "每頁商品數「固定」的情形":
+    if selected == "每頁商品數固定":
         height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
         user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     else:
@@ -340,9 +374,9 @@ def main():
             missing_fields.append("OpenAI API Key")
         if not st.session_state.user_input:
             missing_fields.append("給 ChatGPT 的 Prompt")
-        if option == "每頁商品數「固定」的情形" and not st.session_state.height:
+        if selected == "每頁商品數固定" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
-        if option == "每頁商品數「不固定」的情形":
+        if selected == "每頁商品數不固定":
             if not st.session_state.symbol:
                 missing_fields.append("用來判斷截圖高度的符號或文字")
             if not st.session_state.height_map:
@@ -351,8 +385,21 @@ def main():
     
     # 檢查所有必需字段是否已填寫
     missing_fields = check_required_fields()
-    
-    if ui.button("開始執行", key="run_btn"):
+    with stylable_container(
+            key="run_btn",
+            css_styles="""
+                button {
+                    background-color: #46474A;
+                    color: white;
+                    border-radius: 10px;
+                    border: none;
+                    width: 25%;
+                }
+                """,
+            ):
+        st.write("\n")
+        start_running = st.button("開始執行", key="run_btn")
+    if start_running:
         if missing_fields:
             st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
         else:
@@ -394,7 +441,7 @@ def main():
 
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                if option == "每頁商品數「固定」的情形":
+                if selected == "每頁商品數固定":
                     search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
                 else:
                     search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
@@ -460,7 +507,7 @@ def main():
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} 台幣", description="根據即時匯率", key="card3")
             
-        with st.container(height=400):
+        with st.container(height=400,border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         trigger_download(st.session_state.zip_buffer, "output.zip")
