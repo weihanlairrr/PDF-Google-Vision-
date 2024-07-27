@@ -242,6 +242,28 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     progress_bar.empty()
     progress_text.empty()
 
+def update_height():
+    if st.session_state['height'] != st.session_state['height_input']:
+        st.session_state['height'] = st.session_state['height_input']
+
+def update_user_input():
+    if st.session_state['user_input'] != st.session_state['user_input_input']:
+        st.session_state['user_input'] = st.session_state['user_input_input']
+
+def update_symbol():
+    if st.session_state['symbol'] != st.session_state['symbol_input']:
+        st.session_state['symbol'] = st.session_state['symbol_input']
+
+def update_height_map_str():
+    if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
+        st.session_state['height_map_str'] = st.session_state['height_map_str_input']
+        height_map = {}
+        for item in st.session_state['height_map_str'].split("\n"):
+            if ":" in item:
+                k, v = item.split(":")
+                height_map[int(k.strip())] = int(v.strip())
+        st.session_state['height_map'] = height_map
+
 def main():
     create_directories() 
     option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
@@ -276,24 +298,13 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
-        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input)
-        st.session_state.height = height
-        st.session_state.user_input = user_input
+        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     else:
-        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol)
+        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
         col1, col2 = st.columns([1,1.9])
-        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        height_map = {}
-        for item in height_map_str.split("\n"):
-            if ":" in item:
-                k, v = item.split(":")
-                height_map[int(k.strip())] = int(v.strip())
-        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input)
-        st.session_state.symbol = symbol
-        st.session_state.height_map_str = height_map_str
-        st.session_state.height_map = height_map
-        st.session_state.user_input = user_input
+        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
