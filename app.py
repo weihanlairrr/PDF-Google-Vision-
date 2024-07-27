@@ -252,37 +252,75 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     progress_bar.empty()
     progress_text.empty()
 
+def update_height():
+    if st.session_state['height'] != st.session_state['height_input']:
+        st.session_state['height'] = st.session_state['height_input']
+
+def update_user_input():
+    if st.session_state['user_input'] != st.session_state['user_input_input']:
+        st.session_state['user_input'] = st.session_state['user_input_input']
+
+def update_symbol():
+    if st.session_state['symbol'] != st.session_state['symbol_input']:
+        st.session_state['symbol'] = st.session_state['symbol_input']
+
+def update_height_map_str():
+    if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
+        st.session_state['height_map_str'] = st.session_state['height_map_str_input']
+        height_map = {}
+        for item in st.session_state['height_map_str'].split("\n"):
+            if ":" in item:
+                k, v = item.split(":")
+                height_map[int(k.strip())] = int(v.strip())
+        st.session_state['height_map'] = height_map
+
 def main():
-    create_directories()
+    create_directories() 
     option = ui.tabs(options=["每頁商品數「固定」的情形", "每頁商品數「不固定」的情形"], default_value="每頁商品數「固定」的情形")
 
     with st.sidebar:
         st.image("Image/91APP_logo.png")
         with st.expander("文件上傳"):
-            st.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader", on_change=update_uploaded_files)
-            st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader", on_change=update_uploaded_files)
-            st.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader", on_change=update_uploaded_files)
+            pdf_file = st.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader")
+            data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            json_file = st.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
         st.write("\n")
-        st.text_input("輸入 OpenAI API Key", type="password", key="api_key", on_change=update_uploaded_files)
+        api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
-    if uploaded_files["json"]:
-        temp_json_path = os.path.join("temp", uploaded_files["json"].name)
+    # 將已上傳的文件存入 session state
+    if pdf_file:
+        st.session_state.pdf_file = pdf_file
+    if data_file:
+        st.session_state.data_file = data_file
+    if json_file:
+        st.session_state.json_file = json_file
+    if api_key:
+        st.session_state.api_key = api_key
+
+    # 從 session state 中獲取文件
+    pdf_file = st.session_state.pdf_file
+    data_file = st.session_state.data_file
+    json_file = st.session_state.json_file
+    api_key = st.session_state.api_key
+
+    if json_file:
+        temp_json_path = os.path.join("temp", json_file.name)
         with open(temp_json_path, "wb") as f:
-            f.write(uploaded_files["json"].getbuffer())
+            f.write(json_file.getbuffer())
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if option == "每頁商品數「固定」的情形":
-        st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=uploaded_files["height"], key='height_input', on_change=update_uploaded_files, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        st.text_area("給 ChatGPT 的 Prompt", height=300, value=uploaded_files["user_input"], key='user_input_input', on_change=update_uploaded_files)
+        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     else:
-        st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=uploaded_files["symbol"], key='symbol_input', on_change=update_uploaded_files)
+        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
         col1, col2 = st.columns([1,1.9])
-        col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=uploaded_files["height_map_str"], key='height_map_str_input', on_change=update_uploaded_files, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        col2.text_area("給 ChatGPT 的 Prompt", height=300, value=uploaded_files["user_input"], key='user_input_input', on_change=update_uploaded_files)
+        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
-        prompt = f"'''{text} '''{uploaded_files['user_input']}"
+        prompt = f"'''{text} '''{st.session_state.user_input}"
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -303,22 +341,22 @@ def main():
     
     def check_required_fields():
         missing_fields = []
-        if not uploaded_files["pdf"]:
+        if not pdf_file:
             missing_fields.append("PDF")
-        if not uploaded_files["data"]:
+        if not data_file:
             missing_fields.append("CSV 或 XLSX")
-        if not uploaded_files["json"]:
+        if not json_file:
             missing_fields.append("Google Cloud 憑證")
-        if not uploaded_files["api_key"]:
+        if not api_key:
             missing_fields.append("OpenAI API Key")
-        if not uploaded_files["user_input"]:
+        if not st.session_state.user_input:
             missing_fields.append("給 ChatGPT 的 Prompt")
-        if option == "每頁商品數「固定」的情形" and not uploaded_files["height"]:
+        if option == "每頁商品數「固定」的情形" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
         if option == "每頁商品數「不固定」的情形":
-            if not uploaded_files["symbol"]:
+            if not st.session_state.symbol:
                 missing_fields.append("用來判斷截圖高度的符號或文字")
-            if not uploaded_files["height_map"]:
+            if not st.session_state.height_map:
                 missing_fields.append("對應的截圖高度")
         return missing_fields
     
