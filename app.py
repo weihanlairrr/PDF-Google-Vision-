@@ -38,7 +38,7 @@ with st.sidebar:
             border-radius: 5px;
         }
         [data-testid='stFileUploader'] section {
-            background: black !重要 !important;
+            background: black!important;
             color: black !important;
             padding: 0;
             float: left;
