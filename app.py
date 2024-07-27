@@ -287,7 +287,7 @@ def main():
                 button {
                     background: #46474A;
                     color: white;
-                    border-radius: 10px;
+                    border-radius: 8px;
                     border: none;
                     width: 100%;
                 }
@@ -391,9 +391,12 @@ def main():
                 button {
                     background-color: #46474A;
                     color: white;
-                    border-radius: 10px;
+                    border-radius: 8px;
                     border: none;
                     width: 25%;
+                }
+                button:hover {
+                    background: #6B6C70;
                 }
                 """,
             ):
