@@ -171,6 +171,10 @@ if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'download_triggered' not in st.session_state:
     st.session_state.download_triggered = False
+if 'total_input_tokens' not in st.session_state:
+    st.session_state.total_input_tokens = 0
+if 'total_output_tokens' not in st.session_state:
+    st.session_state.total_output_tokens = 0
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -198,24 +202,22 @@ async def process_texts(api_key, texts, prompt, batch_size=10):
                     formatted_text = format_text(organized_text)
                     yield {"貨號": text, "商品資料": formatted_text}
 
-def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, user_input):
+def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
+    total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
 
-    async def main():
-        data = []
-        async for item in process_texts(api_key, texts, user_input):
-            data.append(item)
-        df_text = pd.DataFrame(data)
-        csv_buffer = io.StringIO()
-        df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-        csv_data = csv_buffer.getvalue().encode('utf-8-sig')
-        zipf.writestr("ocr_output.csv", csv_data)
-        progress_bar.empty()
-        progress_text.empty()
-
-    asyncio.run(main())
+    for i, text in enumerate(texts):
+        page_num, img_p = search_extract_img(file, text, out_dir, h=h)
+        if img_p:
+            zipf.write(img_p, os.path.basename(img_p))
+        # 更新進度條
+        progress = (i + 1) / total_files
+        progress_bar.progress(progress)
+        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
+    progress_bar.empty()
+    progress_text.empty()
 
 # 定義搜尋多個文本並創建壓縮文件的函數，情況2
 def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
@@ -271,12 +273,13 @@ def main():
     with st.sidebar:
         st.image("Image/91APP_logo.png")
         with st.expander("文件上傳"):
-            pdf_file = st.file_uploader("上傳 PDF", type=["pdf"])
-            data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"])
-            json_file = st.file_uploader("上傳 Google Cloud 憑證", type=["json"])
+            pdf_file = st.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader")
+            data_file = st.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            json_file = st.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
         st.write("\n")
         api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
+    # 將已上傳的文件存入 session state
     if pdf_file:
         st.session_state.pdf_file = pdf_file
     if data_file:
@@ -286,6 +289,7 @@ def main():
     if api_key:
         st.session_state.api_key = api_key
 
+    # 從 session state 中獲取文件
     pdf_file = st.session_state.pdf_file
     data_file = st.session_state.data_file
     json_file = st.session_state.json_file
@@ -322,11 +326,6 @@ def main():
         output_tokens = len(encoding.encode(response.choices[0].message.content))
         
         # 將 tokens 計數存入 session_state
-        if 'total_input_tokens' not in st.session_state:
-            st.session_state.total_input_tokens = 0
-        if 'total_output_tokens' not in st.session_state:
-            st.session_state.total_output_tokens = 0
-            
         st.session_state.total_input_tokens += input_tokens
         st.session_state.total_output_tokens += output_tokens
         
@@ -360,8 +359,17 @@ def main():
         if missing_fields:
             st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
         else:
+            # 重置輸入和輸出 tokens 計數
+            st.session_state.total_input_tokens = 0
+            st.session_state.total_output_tokens = 0
+
+            # 清除之前的顯示內容
             st.session_state.task_completed = False
             st.session_state.download_triggered = False
+            st.session_state.zip_buffer = None
+            st.session_state.zip_file_ready = False
+            st.session_state.df_text = pd.DataFrame()
+
             temp_dir = "temp"
             output_dir = os.path.join(temp_dir, "output")
             clear_directory(output_dir)  
