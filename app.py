@@ -200,7 +200,7 @@ async def process_texts(api_key, texts, prompt, batch_size=10):
                 for result, text in zip(results, batch):
                     organized_text = result['choices'][0]['message']['content']
                     formatted_text = format_text(organized_text)
-                    yield {"貨號": text, "商品資料": formatted_text}
+                    yield {"貨號": text, "文案": formatted_text}
 
 def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
     total_files = len(texts)
