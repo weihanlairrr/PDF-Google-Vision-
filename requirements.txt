@@ -9,4 +9,3 @@ py_currency_converter
 streamlit_shadcn_ui
 streamlit_option_menu
 streamlit_extras
-concurrent.futures
