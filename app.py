@@ -17,6 +17,9 @@ from openai import OpenAI
 from google.cloud import vision
 from py_currency_converter import convert
 
+st.image("Image/flow.png")
+st.write("\n")
+
 with st.sidebar:
     st.markdown(
         """
@@ -47,6 +50,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
+
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -138,37 +142,13 @@ def trigger_download(zip_buffer, filename):
         </html>
     """, height=0)
 
-@st.cache_data
-def get_upload_files():
-    return {"pdf": None, "data": None, "json": None, "api_key": "", "height": "", "symbol": "", "height_map_str": "", "height_map": {}, "user_input": ""}
-
-uploaded_files = get_upload_files()
-
-def update_uploaded_files():
-    if 'pdf_file_uploader' in st.session_state:
-        uploaded_files["pdf"] = st.session_state.pdf_file_uploader
-    if 'data_file_uploader' in st.session_state:
-        uploaded_files["data"] = st.session_state.data_file_uploader
-    if 'json_file_uploader' in st.session_state:
-        uploaded_files["json"] = st.session_state.json_file_uploader
-    if 'api_key' in st.session_state:
-        uploaded_files["api_key"] = st.session_state.api_key
-    if 'height_input' in st.session_state:
-        uploaded_files["height"] = st.session_state.height_input
-    if 'symbol_input' in st.session_state:
-        uploaded_files["symbol"] = st.session_state.symbol_input
-    if 'height_map_str_input' in st.session_state:
-        uploaded_files["height_map_str"] = st.session_state.height_map_str_input
-        height_map = {}
-        for item in uploaded_files["height_map_str"].split("\n"):
-            if ":" in item:
-                k, v = item.split(":")
-                height_map[int(k.strip())] = int(v.strip())
-        uploaded_files["height_map"] = height_map
-    if 'user_input_input' in st.session_state:
-        uploaded_files["user_input"] = st.session_state.user_input_input
-
 # 初始化 session state 變數
+if 'zip_buffer' not in st.session_state:
+    st.session_state.zip_buffer = None
+if 'zip_file_ready' not in st.session_state:
+    st.session_state.zip_file_ready = False
+if 'df_text' not in st.session_state:
+    st.session_state.df_text = pd.DataFrame()
 if 'pdf_file' not in st.session_state:
     st.session_state.pdf_file = None
 if 'data_file' not in st.session_state:
@@ -187,14 +167,6 @@ if 'height_map' not in st.session_state:
     st.session_state.height_map = {}
 if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
-
-# 確保其他需要初始化的 session state 變數
-if 'zip_buffer' not in st.session_state:
-    st.session_state.zip_buffer = None
-if 'zip_file_ready' not in st.session_state:
-    st.session_state.zip_file_ready = False
-if 'df_text' not in st.session_state:
-    st.session_state.df_text = pd.DataFrame()
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'download_triggered' not in st.session_state:
@@ -307,6 +279,7 @@ def main():
         st.write("\n")
         api_key = st.text_input("輸入 OpenAI API Key", type="password")
 
+    # 將已上傳的文件存入 session state
     if pdf_file:
         st.session_state.pdf_file = pdf_file
     if data_file:
@@ -333,7 +306,7 @@ def main():
         user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     else:
         symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
-        col1, col2 = st.columns([1, 1.9])
+        col1, col2 = st.columns([1,1.9])
         height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
         user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
@@ -401,21 +374,21 @@ def main():
             output_dir = os.path.join(temp_dir, "output")
             clear_directory(output_dir)  
 
-            pdf_path = os.path.join(temp_dir, uploaded_files["pdf"].name)
+            pdf_path = os.path.join(temp_dir, pdf_file.name)
             with open(pdf_path, "wb") as f:
-                f.write(uploaded_files["pdf"].getbuffer())
+                f.write(pdf_file.getbuffer())
 
-            data_path = os.path.join(temp_dir, uploaded_files["data"].name)
+            data_path = os.path.join(temp_dir, data_file.name)
             with open(data_path, "wb") as f:
-                f.write(uploaded_files["data"].getbuffer())
+                f.write(data_file.getbuffer())
 
             try:
-                if uploaded_files["data"].name.endswith('.csv'):
+                if data_file.name.endswith('.csv'):
                     df = pd.read_csv(data_path, encoding='utf-8')
                 else:
                     df = pd.read_excel(data_path, engine='openpyxl')
             except UnicodeDecodeError:
-                if uploaded_files["data"].name.endswith('.csv'):
+                if data_file.name.endswith('.csv'):
                     df = pd.read_csv(data_path, encoding='latin1')
                 else:
                     df = pd.read_excel(data_path, engine='openpyxl')
@@ -425,9 +398,9 @@ def main():
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                 if option == "每頁商品數「固定」的情形":
-                    search_and_zip_case1(pdf_path, texts, int(uploaded_files["height"]), output_dir, zipf, uploaded_files["api_key"], uploaded_files["user_input"])
+                    search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
                 else:
-                    search_and_zip_case2(pdf_path, texts, uploaded_files["symbol"], uploaded_files["height_map"], output_dir, zipf)
+                    search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
 
                 image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                 data = []
@@ -443,7 +416,7 @@ def main():
                         image_file = futures[future]
                         try:
                             text = future.result()
-                            organized_text = organize_text_with_gpt(text, uploaded_files["api_key"])
+                            organized_text = organize_text_with_gpt(text, api_key)
                             formatted_text = format_text(organized_text)
                             data.append({"貨號": os.path.splitext(image_file)[0], "圖片內容": text, "文案": formatted_text})
                         except Exception as exc:
