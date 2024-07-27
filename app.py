@@ -391,7 +391,7 @@ def main():
                             text = future.result()
                             organized_text = organize_text_with_gpt(text, uploaded_files["api_key"])
                             formatted_text = format_text(organized_text)
-                            data.append({"貨號": os.path.splitext(image_file)[0], "圖片內容": text, "商品資料": formatted_text})
+                            data.append({"貨號": os.path.splitext(image_file)[0], "圖片內容": text, "文案": formatted_text})
                         except Exception as exc:
                             print(f'{image_file} generated an exception: {exc}')
 
