@@ -138,7 +138,7 @@ def trigger_download(zip_buffer, filename):
         </html>
     """, height=0)
 
-@st.cache(allow_output_mutation=True)
+@st.cache_data
 def get_upload_files():
     return {"pdf": None, "data": None, "json": None, "api_key": "", "height": "", "symbol": "", "height_map_str": "", "height_map": {}, "user_input": ""}
 
