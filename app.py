@@ -30,13 +30,13 @@ with st.sidebar:
         }
 
         [data-testid='stFileUploader'] section button {
-            background-color: #46474A !important;
-            color: white !important;
+            background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%) !important;
+            color: #46474A !important;
             border-radius: 5px;
             border: none;
         }
         [data-testid='stFileUploader'] section {
-            background: #46474A !important;
+            background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%)!important;
             color: black !important;
             padding: 0;
         ;
