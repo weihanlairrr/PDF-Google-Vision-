@@ -23,6 +23,9 @@ with st.sidebar:
     st.markdown(
         """
         <style>
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        }
         .centered {
             display: flex;
             justify-content: center;
@@ -281,21 +284,22 @@ def main():
         icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
-            "icon": {"color": "#FF8C00", "font-size": "17px"},
-            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"2px", "--hover-color": "#D6EDF2"},
-            "nav-link-selected": {"background": "#8EBDCD", "color": "#200"},
+            "icon": {"padding": "0px 20px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
+            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
+            "nav-link-selected": {"background": "#EAE9E9", "color": "#2b2b2b"},
         }
     )
         with stylable_container(
-            key="green_popover",
-            css_styles="""
-                button {
-                    background: #46474A;
-                    color: white;
-                    border-radius: 8px;
-                    border: none;
-                    width: 100%;
-                }
+                key="popover",
+                css_styles="""
+                    button {
+                        background: #46474A;
+                        color: white;
+                        border-radius: 8px;
+                        border: none;
+                        width: 100%;
+                        transition: background-color 0.3s;
+                    }
                 """,
             ):
             st.divider()
@@ -407,6 +411,7 @@ def main():
             ):
         st.write("\n")
         start_running = st.button("開始執行", key="run_btn")
+
     if start_running:
         if missing_fields:
             st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
