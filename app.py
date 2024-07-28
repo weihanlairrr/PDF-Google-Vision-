@@ -342,13 +342,13 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if selected == "每頁商品數固定":
-        height = st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        user_input = st.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+        st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        st.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     else:
-        symbol = st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
+        st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
         col1, col2 = st.columns([1,1.9])
-        height_map_str = col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=300, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        user_input = col2.text_area("給 ChatGPT 的 Prompt", height=300, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+        col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+        col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
