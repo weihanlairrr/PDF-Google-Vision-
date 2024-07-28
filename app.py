@@ -19,7 +19,7 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
-st.subtitle("PDF截圖與AI文案生成工具")
+st.subheader("PDF截圖與AI文案生成工具")
 with st.sidebar:
     st.markdown(
         """
