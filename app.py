@@ -288,7 +288,7 @@ def main():
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
             "icon": {"color": "#FF8C00", "font-size": "17px"},
-            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"2px", "--hover-color": "#B2D9E1"},
+            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"2px", "--hover-color": "#D6EDF2"},
             "nav-link-selected": {"background": "#8EBDCD", "color": "#200"},
         }
     )
