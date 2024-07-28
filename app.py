@@ -19,7 +19,20 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
-st.subheader("PDF截圖與AI文案生成工具")
+st.markdown("""
+    <style>
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+# 使用 HTML 和 CSS 將 subheader 置中
+st.markdown('<div class="centered"><h2>這是置中的 Subheader</h2></div>', unsafe_allow_html=True)
 with st.sidebar:
     st.markdown(
         """
