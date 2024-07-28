@@ -277,7 +277,7 @@ def main():
         ["每頁商品數固定",'每頁商品數不固定'],
         icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
         styles={
-            "container": {"padding": "0!important", "background": "#F5F5F5","border-radius": "0px"},
+            "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
             "icon": {"color": "#FF8C00", "font-size": "17px"},
             "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"5px", "--hover-color": "#8EBDCD"},
             "nav-link-selected": {"background": "#8EBDCD", "color": "#200"},
