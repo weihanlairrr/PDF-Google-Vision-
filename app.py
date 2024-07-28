@@ -30,7 +30,7 @@ with st.sidebar:
         }
 
         [data-testid='stFileUploader'] section button {
-            background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%) !important;
+            background: transparent !important;
             color: #46474A !important;
             border-radius: 5px;
             border: none;
