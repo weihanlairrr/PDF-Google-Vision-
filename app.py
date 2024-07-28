@@ -47,7 +47,7 @@ with st.sidebar:
             display: none;
         }
         [data-testid=stSidebar] {
-            background: #f5f5f5;
+            background: #F9F9F9;
         }
         </style>
         """,
