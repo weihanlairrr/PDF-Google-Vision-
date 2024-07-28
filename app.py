@@ -34,6 +34,8 @@ with st.sidebar:
             color: #46474A !important;
             border-radius: 5px;
             border: none;
+            display: block;
+            margin: 0 auto;
         }
         [data-testid='stFileUploader'] section {
             background: linear-gradient(-135deg, #FFFFFF 0%, #ECECEC 80%, #D4D4D4 80%, #ECECEC 80%)!important;
