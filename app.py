@@ -307,8 +307,8 @@ def main():
             st.divider()
             popover = st.popover("文件上傳")
                  
-        pdf_file = popover.file_uploader("上傳 PDF", type=["pdf"], key="pdf_file_uploader")
-        data_file = popover.file_uploader("上傳 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+        pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
+        data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
         json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
         st.write("\n")
         with stylable_container(
