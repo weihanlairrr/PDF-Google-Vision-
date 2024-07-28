@@ -60,7 +60,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-st.markdown('<div class="centered"><h4>PDF截圖與AI文案生成工具</h4></div>', unsafe_allow_html=True)
+st.markdown('<div class="centered"><h3>PDF截圖與AI文案生成工具</h3></div>', unsafe_allow_html=True)
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
