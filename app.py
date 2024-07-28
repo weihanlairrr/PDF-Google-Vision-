@@ -284,7 +284,7 @@ def main():
         icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
-            "icon": {"padding": "0px 20px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
+            "icon": {"padding": "0px 10px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
             "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
             "nav-link-selected": { "border-radius": "0px","background": "#EAE9E9", "color": "#2b2b2b"},
         }
