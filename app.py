@@ -409,7 +409,6 @@ def main():
                 }
                 """,
             ):
-        st.write("\n")
         start_running = st.button("開始執行", key="run_btn")
 
     if start_running:
