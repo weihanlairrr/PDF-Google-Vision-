@@ -30,8 +30,11 @@ with st.sidebar:
             height: 100%;
             text-align: center;
         }
-
-
+        .stTextInput, .stTextArea {
+            box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            border: none;
+        }
         [data-testid='stFileUploader'] section button {
             background: transparent !important;
             color: #46474A !important;
