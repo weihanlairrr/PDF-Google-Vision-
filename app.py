@@ -508,6 +508,7 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
+                st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
     
@@ -565,7 +566,6 @@ def main():
                     data = []
                     total_files = len(image_files)
                     
-                    st.write('\n')
                     progress_bar = st.progress(0)
                     progress_text = st.empty()
                     progress_text.text("準備載入截圖")
