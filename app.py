@@ -639,16 +639,34 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         
-        # 使用 Streamlit 的文件下載工具
-        st.download_button(
-            label="下載結果",
-            data=st.session_state.zip_buffer,
-            file_name="output.zip",
-            mime="application/zip"
-        )
+        # 使用自定義 HTML 和 JavaScript 自動下載 ZIP 文件
+        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
+        components.html(f"""
+            <html>
+            <head>
+            <script type="text/javascript">
+                function downloadURI(uri, name) {{
+                    var link = document.createElement("a");
+                    link.href = uri;
+                    link.download = name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }}
+                window.onload = function() {{
+                    var link = document.createElement("a");
+                    link.href = "data:application/zip;base64,{b64}";
+                    link.download = "output.zip";
+                    link.click();
+                }}
+            </script>
+            </head>
+            </html>
+        """, height=0)
         
         st.session_state.download_triggered = True
 
         
 if __name__ == "__main__":
     main()
+
