@@ -26,6 +26,14 @@ with st.sidebar:
         .stButton > button:hover {
             background: linear-gradient(135deg, #707070 0%, #707070 100%);      
         }
+        .stDownloadButton button {
+            background-color: #46474A !important;
+            color: #f5f5f5 !important;
+            border: none;
+        }
+        .stDownloadButton button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
+        }
         .centered {
             display: flex;
             justify-content: center;
@@ -175,32 +183,8 @@ if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
     st.session_state.total_output_tokens = 0
-
-async def fetch_gpt_response(session, api_key, text, prompt):
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": prompt.format(text)}]
-    }
-    async with session.post(url, headers=headers, json=payload) as response:
-        return await response.json()
-
-async def process_texts(api_key, texts, prompt, batch_size=10):
-    async with aiohttp.ClientSession() as session:
-        tasks = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-            tasks.extend([fetch_gpt_response(session, api_key, text, prompt) for text in batch])
-            if tasks:
-                results = await asyncio.gather(*tasks)
-                for result, text in zip(results, batch):
-                    organized_text = result['choices'][0]['message']['content']
-                    formatted_text = format_text(organized_text)
-                    yield {"貨號": text, "文案": formatted_text}
+if 'is_running' not in st.session_state:
+    st.session_state.is_running = False
 
 def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
     total_files = len(texts)
@@ -253,7 +237,32 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     
     progress_bar.empty()
     progress_text.empty()
+    
+async def fetch_gpt_response(session, api_key, text, prompt):
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": prompt.format(text)}]
+    }
+    async with session.post(url, headers=headers, json=payload) as response:
+        return await response.json()
 
+async def process_texts(api_key, texts, prompt, batch_size=10):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            tasks.extend([fetch_gpt_response(session, api_key, text, prompt) for text in batch])
+            if tasks:
+                results = await asyncio.gather(*tasks)
+                for result, text in zip(results, batch):
+                    organized_text = result['choices'][0]['message']['content']
+                    formatted_text = format_text(organized_text)
+                    yield {"貨號": text, "文案": formatted_text}
 
 def update_api_key():
     if st.session_state['api_key'] != st.session_state['api_key_input']:
@@ -274,7 +283,7 @@ def update_symbol():
         st.session_state['symbol'] = st.session_state['symbol_input']
 
 def update_height_map_str():
-    st.session_state.height_map_errors = []  # 用於存放高度對應的錯誤訊息
+    st.session_state.height_map_errors = []  
     if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
         st.session_state['height_map_str'] = st.session_state['height_map_str_input']
         height_map = {}
@@ -505,6 +514,8 @@ def main():
             start_running = st.button("開始執行", key="run_btn")
 
         if start_running:
+            st.session_state.is_running = True  # 設置正在運行狀態
+
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
@@ -628,6 +639,29 @@ def main():
             ui.table(st.session_state.df_text)
         trigger_download(st.session_state.zip_buffer, "output.zip", "zip")
         st.session_state.download_triggered = True
+
+    if st.session_state.is_running:
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] * {
+                pointer-events: none;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] * {
+                pointer-events: auto;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
 if __name__ == "__main__":
     main()
