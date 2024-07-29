@@ -285,20 +285,8 @@ def load_data(file):
 
 def main():
     create_directories() 
-    
-    with st.sidebar:
-        with stylable_container(
-                key="logo_container",
-                css_styles="""
-                    img {
-                        justify-content: center;
-                        width: 70%; 
-                        height: auto; 
-                    }
-                """
-            ):
-            st.image("Image/91APP_logo.png")
-        selected = option_menu("",
+    st.image("Image/91APP_logo.png")
+    selected = option_menu("",
         ["每頁商品數固定",'每頁商品數不固定','品名翻譯'],
         icons=['caret-right-fill','caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
         styles={
