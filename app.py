@@ -20,45 +20,6 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
-with st.sidebar:
-    st.markdown(
-        """
-        <style>
-        .stButton > button:hover {
-            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
-        }
-        .centered {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            text-align: center;
-        }
-        [data-testid='stFileUploader'] section button {
-            background: transparent !important;
-            color: #46474A !important;
-            border-radius: 5px;
-            border: none;
-            display: block;
-            margin: 0 auto;
-        }
-        [data-testid='stFileUploader'] section {
-            background: #ECECEC!important;
-            color: black !important;
-            padding: 0;
-        ;
-        }
-        [data-testid='stFileUploader'] section > input + div {
-            display: none;
-        }
-        [data-testid=stSidebar] {
-            background: #F9F9F9;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
@@ -67,6 +28,12 @@ def clear_directory(directory):
     if os.path.exists(directory):
         shutil.rmtree(directory)
     os.makedirs(directory, exist_ok=True)
+
+def load_data(file):
+    if file.name.endswith('.csv'):
+        return pd.read_csv(file)
+    elif file.name.endswith('.xlsx'):
+        return pd.read_excel(file)
 
 # 定義在PDF中搜尋文本並返回頁碼和矩形區域的函數
 def search_pdf(file, text):
@@ -364,54 +331,7 @@ def main():
         st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
         st.write("\n")
         st.write("\n")
-        def translate_product_name(product_name, knowledge_data):
-            translations = {}
-            lines = product_name.split('\n')
-            for line in lines:
-                if '：' in line:
-                    type_name, eng_name = line.split('：', 1)
-                    # Find corresponding Chinese name from the knowledge base
-                    matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
-                    if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[0]['中文名稱']
-                    else:
-                        translations[type_name] = eng_name.strip()
-                else:
-                    translations[line] = line
-            return translations
-
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
         
-        def trigger_download(data, filename):
-            b64 = base64.b64encode(data).decode()
-            components.html(f"""
-                <html>
-                <head>
-                <script type="text/javascript">
-                    function downloadURI(uri, name) {{
-                        var link = document.createElement("a");
-                        link.href = uri;
-                        link.download = name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }}
-                    window.onload = function() {{
-                        var link = document.createElement("a");
-                        link.href = "data:text/csv;base64,{b64}";
-                        link.download = "{filename}";
-                        link.click();
-                    }}
-                </script>
-                </head>
-                </html>
-            """, height=0)
-            st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
-
         col1,col2 = st.columns(2)
         with col1:
             knowledge_file = st.file_uploader("上傳翻譯對照表", type=["xlsx", "csv"])
@@ -425,7 +345,6 @@ def main():
                 example_test_data = pd.read_csv("翻譯品名範例格式.csv")
                 ui.table(example_test_data)
             
-    
         if knowledge_file and test_file:
             knowledge_data = load_data(knowledge_file)
             if isinstance(knowledge_data, dict):
@@ -634,6 +553,5 @@ def main():
         trigger_download(st.session_state.zip_buffer, "output.zip")
         st.session_state.download_triggered = True
 
-        
 if __name__ == "__main__":
     main()
