@@ -20,52 +20,52 @@ from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
 with st.sidebar:
-        st.markdown(
-                """
-                <style>
-                .stButton > button:hover {
-                    background: linear-gradient(135deg, #707070 0%, #707070 100%);      
-                }
-                .stDownloadButton button {
-                    background-color: #46474A !important;
-                    color: #f5f5f5 !important;
-                    border: none;
-                }
-                .stDownloadButton button:hover {
-                    background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
-                }
-                .centered {
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100%;
-                    text-align: center;
-                }
-                [data-testid='stFileUploader'] section button {
-                    background: transparent !important;
-                    color: #46474A !important;
-                    border-radius: 5px;
-                    border: none;
-                    display: block;
-                    margin: 0 auto;
-                }
-                [data-testid='stFileUploader'] section {
-                    background: #ECECEC!important;
-                    color: black !important;
-                    padding: 0;
-                ;
-                }
-                [data-testid='stFileUploader'] section > input + div {
-                    display: none;
-                }
-                [data-testid=stSidebar] {
-                    background: #F9F9F9;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True
-            )
-                                        
+    st.markdown(
+        """
+        <style>
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        }
+        .stDownloadButton button {
+            background-color: #46474A !important;
+            color: #f5f5f5 !important;
+            border: none;
+        }
+        .stDownloadButton button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
+        }
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+        [data-testid='stFileUploader'] section button {
+            background: transparent !important;
+            color: #46474A !important;
+            border-radius: 5px;
+            border: none;
+            display: block;
+            margin: 0 auto;
+        }
+        [data-testid='stFileUploader'] section {
+            background: #ECECEC!important;
+            color: black !important;
+            padding: 0;
+        ;
+        }
+        [data-testid='stFileUploader'] section > input + div {
+            display: none;
+        }
+        [data-testid=stSidebar] {
+            background: #F9F9F9;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
