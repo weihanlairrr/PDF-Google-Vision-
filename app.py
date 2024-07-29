@@ -124,30 +124,6 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
-def trigger_download(zip_buffer, filename):
-    b64 = base64.b64encode(zip_buffer).decode()
-    components.html(f"""
-        <html>
-        <head>
-        <script type="text/javascript">
-            function downloadURI(uri, name) {{
-                var link = document.createElement("a");
-                link.href = uri;
-                link.download = name;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }}
-            window.onload = function() {{
-                var link = document.createElement("a");
-                link.href = "data:application/zip;base64,{b64}";
-                link.download = "{filename}";
-                link.click();
-            }}
-        </script>
-        </head>
-        </html>
-    """, height=0)
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -316,8 +292,8 @@ def main():
                 st.write('\n')
                 popover = st.popover("文件上傳")
 
-            pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
-            data_file = popover.file_uploader("上傳貨號檔 CSV/XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader",help="記得先刪除封面、目錄和多餘頁面")
+            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader",help="貨號放A欄，且首列應為標題")
             json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
@@ -424,7 +400,6 @@ def main():
             with st.expander("翻譯品名 範例格式"):
                 example_test_data = pd.read_csv("翻譯品名範例格式.csv")
                 ui.table(example_test_data)
-            
     
         if knowledge_file and test_file:
             knowledge_data = load_data(knowledge_file)
@@ -653,7 +628,7 @@ def main():
                 window.onload = function() {{
                     var link = document.createElement("a");
                     link.href = "data:application/zip;base64,{b64}";
-                    link.download = "output.zip";
+                    link.download = "執行結果.zip";
                     link.click();
                 }}
             </script>
