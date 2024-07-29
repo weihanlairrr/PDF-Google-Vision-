@@ -291,6 +291,7 @@ def main():
                 key="logo_container",
                 css_styles="""
                     img {
+                        justify-content: center;
                         width: 70%; 
                         height: auto; 
                     }
