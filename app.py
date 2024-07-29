@@ -278,10 +278,20 @@ def update_height_map_str():
         st.session_state['height_map'] = height_map
 
 def load_data(file):
-    if file.name.endswith('.csv'):
-        return pd.read_csv(file)
-    elif file.name.endswith('.xlsx'):
-        return pd.read_excel(file, sheet_name=None)
+    try:
+        if file.name.endswith('.csv'):
+            return pd.read_csv(file, encoding='utf-8')
+        elif file.name.endswith('.xlsx'):
+            return pd.read_excel(file, engine='openpyxl')
+    except UnicodeDecodeError:
+        try:
+            if file.name.endswith('.csv'):
+                return pd.read_csv(file, encoding='latin1')
+            elif file.name.endswith('.xlsx'):
+                return pd.read_excel(file, engine='openpyxl')
+        except Exception as e:
+            st.error(f"無法讀取文件：{e}")
+            return None
 
 def main():
     create_directories() 
@@ -385,39 +395,7 @@ def main():
                 else:
                     translations[line] = line
             return translations
-
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
         
-        def trigger_download(data, filename):
-            b64 = base64.b64encode(data).decode()
-            components.html(f"""
-                <html>
-                <head>
-                <script type="text/javascript">
-                    function downloadURI(uri, name) {{
-                        var link = document.createElement("a");
-                        link.href = uri;
-                        link.download = name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }}
-                    window.onload = function() {{
-                        var link = document.createElement("a");
-                        link.href = "data:text/csv;base64,{b64}";
-                        link.download = "{filename}";
-                        link.click();
-                    }}
-                </script>
-                </head>
-                </html>
-            """, height=0)
-            st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
-
         col1,col2 = st.columns(2)
         with col1:
             knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
@@ -443,7 +421,7 @@ def main():
                 test_data = test_data[list(test_data.keys())[0]]
                 
             if not isinstance(test_data, pd.DataFrame):
-                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
+                st.error("無法讀取測試檔案，請檢查文件格式是否正確。")
                 return
             
             translated_data = []
@@ -560,15 +538,14 @@ def main():
                     f.write(data_file.getbuffer())
     
                 try:
-                    if data_file.name.endswith('.csv'):
-                        df = pd.read_csv(data_path, encoding='utf-8')
-                    else:
-                        df = pd.read_excel(data_path, engine='openpyxl')
-                except UnicodeDecodeError:
-                    if data_file.name.endswith('.csv'):
-                        df = pd.read_csv(data_path, encoding='latin1')
-                    else:
-                        df = pd.read_excel(data_path, engine='openpyxl')
+                    df = load_data(data_file)
+                except Exception as e:
+                    st.error(f"無法讀取貨號檔，請檢查文件格式：{e}")
+                    return
+    
+                if df is None:
+                    st.error("無法讀取貨號檔，請檢查文件格式。")
+                    return
     
                 texts = df.iloc[:, 0].tolist()
     
@@ -647,7 +624,5 @@ def main():
         trigger_download(st.session_state.zip_buffer, "output.zip")
         st.session_state.download_triggered = True
 
-        
 if __name__ == "__main__":
     main()
-
