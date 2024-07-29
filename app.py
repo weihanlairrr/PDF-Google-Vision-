@@ -2,6 +2,7 @@ import streamlit as st
 import fitz  # PyMuPDF
 import os
 import shutil
+import openpyxl
 import zipfile
 import pandas as pd
 import io
