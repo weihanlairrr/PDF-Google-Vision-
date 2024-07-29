@@ -281,7 +281,7 @@ def load_data(file):
     if file.name.endswith('.csv'):
         return pd.read_csv(file)
     elif file.name.endswith('.xlsx'):
-        return pd.read_excel(file, engine='openpyxl')
+        return pd.read_excel(file, sheet_name=None)
 
 def main():
     create_directories() 
@@ -562,8 +562,7 @@ def main():
                     if data_file.name.endswith('.csv'):
                         df = pd.read_csv(data_path, encoding='latin1')
                     else:
-                        st.write("讀取Excel檔案時發生錯誤，請檢查文件格式是否正確。")
-                        return
+                        df = pd.read_excel(data_path, engine='openpyxl')
     
                 texts = df.iloc[:, 0].tolist()
     
