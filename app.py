@@ -321,7 +321,7 @@ def main():
                 popover = st.popover("文件上傳")
 
             pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader",help="記得先刪除封面、目錄和多餘頁面")
-            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader",help="貨號放A欄，且首列應為標題")
+            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader",help="貨號放A欄，且首列須為任意標題")
             json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
@@ -399,12 +399,16 @@ def main():
             with st.expander("品名對照表 範例格式"):
                 example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
                 ui.table(example_knowledge_data)
+                example_knowledge_csv = example_knowledge_data.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="下載範例檔案", data=example_knowledge_csv, file_name="品名對照表範例格式.csv", mime="text/csv")
         
         with col2:
             test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
-            with st.expander("翻譯品名 範例格式"):
+            with st.expander("待翻譯品名 範例格式"):
                 example_test_data = pd.read_csv("翻譯品名範例格式.csv")
                 ui.table(example_test_data)
+                example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
     
         if knowledge_file and test_file:
             knowledge_data = load_data(knowledge_file)
