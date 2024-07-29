@@ -386,7 +386,7 @@ def main():
                     translations[line] = line
             return translations
         
-        def trigger_download(data, filename):
+        def trigger_csv_download(data, filename):
             b64 = base64.b64encode(data).decode()
             components.html(f"""
                 <html>
@@ -442,7 +442,6 @@ def main():
             
             translated_data = []
             
-            # Extract the column names from the test data
             column_names = test_data.columns.to_list()
             
             for index, row in test_data.iterrows():
@@ -456,13 +455,11 @@ def main():
             st.write("翻譯結果")
             with st.container(height=400, border=None):
                 ui.table(translated_df)
-            
-            # CSV download
+                
             csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
             csv_data = csv.encode('utf-8-sig')
-            
-            # 使用 trigger_download 函數自動下載CSV文件
-            trigger_download(csv_data, '翻譯結果.csv')
+
+            trigger_csv_download(csv_data, '翻譯結果.csv')
             
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
