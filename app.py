@@ -317,7 +317,7 @@ def main():
                 popover = st.popover("文件上傳")
 
             pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
-            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            data_file = popover.file_uploader("上傳貨號檔 CSV/XLSX", type=["csv", "xlsx"], key="data_file_uploader")
             json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
@@ -420,13 +420,13 @@ def main():
 
         col1,col2 = st.columns(2)
         with col1:
-            knowledge_file = st.file_uploader("上傳翻譯對照表", type=["xlsx", "csv"])
+            knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
             with st.expander("品名對照表 範例格式"):
                 example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
                 ui.table(example_knowledge_data)
         
         with col2:
-            test_file = st.file_uploader("上傳需要翻譯的檔案", type=["xlsx", "csv"])
+            test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
             with st.expander("翻譯品名 範例格式"):
                 example_test_data = pd.read_csv("翻譯品名範例格式.csv")
                 ui.table(example_test_data)
