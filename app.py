@@ -386,33 +386,7 @@ def main():
                     translations[line] = line
             return translations
         
-        def trigger_download(data, filename):
-            b64 = base64.b64encode(data).decode()
-            components.html(f"""
-                <html>
-                <head>
-                <script type="text/javascript">
-                    function downloadURI(uri, name) {{
-                        var link = document.createElement("a");
-                        link.href = uri;
-                        link.download = name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }}
-                    window.onload = function() {{
-                        var link = document.createElement("a");
-                        link.href = "data:text/csv;base64,{b64}";
-                        link.download = "{filename}";
-                        link.click();
-                    }}
-                </script>
-                </head>
-                </html>
-            """, height=0)
-            st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
-
-        col1,col2 = st.columns(2)
+        col1, col2 = st.columns(2)
         with col1:
             knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
             with st.expander("品名對照表 範例格式"):
@@ -461,8 +435,13 @@ def main():
             csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
             csv_data = csv.encode('utf-8-sig')
             
-            # 使用 trigger_download 函數自動下載CSV文件
-            trigger_download(csv_data, '翻譯結果.csv')
+            # 使用 st.download_button 來提供 CSV 文件下載
+            st.download_button(
+                label="下載翻譯結果 CSV",
+                data=csv_data,
+                file_name='翻譯結果.csv',
+                mime='text/csv',
+            )
             
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
@@ -638,32 +617,12 @@ def main():
         with st.container(height=400,border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-        
-        # 使用自定義 HTML 和 JavaScript 自動下載 ZIP 文件
-        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
-        components.html(f"""
-            <html>
-            <head>
-            <script type="text/javascript">
-                function downloadURI(uri, name) {{
-                    var link = document.createElement("a");
-                    link.href = uri;
-                    link.download = name;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }}
-                window.onload = function() {{
-                    var link = document.createElement("a");
-                    link.href = "data:application/zip;base64,{b64}";
-                    link.download = "output.zip";
-                    link.click();
-                }}
-            </script>
-            </head>
-            </html>
-        """, height=0)
-        
+        st.download_button(
+            label="下載結果 ZIP",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip",
+        )
         st.session_state.download_triggered = True
 
         
