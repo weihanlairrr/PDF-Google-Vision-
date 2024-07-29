@@ -454,7 +454,7 @@ def main():
             
             st.divider()
             st.write("翻譯結果")
-            with st.container(height=300, border=None):
+            with st.container(height=400, border=None):
                 ui.table(translated_df)
             
             # CSV download
