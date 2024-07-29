@@ -315,10 +315,13 @@ def main():
                 ):
                 st.write('\n')
                 popover = st.popover("文件上傳")
-
-            pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
-            data_file = popover.file_uploader("上傳貨號檔 CSV/XLSX", type=["csv", "xlsx"], key="data_file_uploader")
-            json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
+            col1,col2,col3 = st.columns(3)
+            with col1:
+                pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
+            with col2:
+                data_file = popover.file_uploader("上傳貨號檔 CSV/XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            with col3:
+                json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
                 key="text_input_styles",
