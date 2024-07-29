@@ -277,6 +277,12 @@ def update_height_map_str():
                 height_map[int(k.strip())] = int(v.strip())
         st.session_state['height_map'] = height_map
 
+def load_data(file):
+    if file.name.endswith('.csv'):
+        return pd.read_csv(file)
+    elif file.name.endswith('.xlsx'):
+        return pd.read_excel(file, sheet_name=None)
+
 def main():
     create_directories() 
     
@@ -432,6 +438,13 @@ def main():
                 knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
             
             test_data = load_data(test_file)
+            
+            if isinstance(test_data, dict):
+                test_data = test_data[list(test_data.keys())[0]]
+                
+            if not isinstance(test_data, pd.DataFrame):
+                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
+                return
             
             translated_data = []
             
@@ -637,3 +650,4 @@ def main():
         
 if __name__ == "__main__":
     main()
+
