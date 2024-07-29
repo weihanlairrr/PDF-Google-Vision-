@@ -2,7 +2,6 @@ import streamlit as st
 import fitz  # PyMuPDF
 import os
 import shutil
-import openpyxl
 import zipfile
 import pandas as pd
 import io
@@ -124,6 +123,29 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
+def trigger_download(zip_buffer, filename):
+    b64 = base64.b64encode(zip_buffer).decode()
+    components.html(f"""
+        <html>
+        <head>
+        <script type="text/javascript">
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                downloadURI("data:application/zip;base64,{b64}", "{filename}");
+            }}
+        </script>
+        </head>
+        <body>
+        </body>
+        </html>
+    """, height=0)
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -252,13 +274,7 @@ def update_height_map_str():
                 k, v = item.split(":")
                 height_map[int(k.strip())] = int(v.strip())
         st.session_state['height_map'] = height_map
-
-def load_data(file):
-    if file.name.endswith('.csv'):
-        return pd.read_csv(file)
-    elif file.name.endswith('.xlsx'):
-        return pd.read_excel(file, sheet_name=None)
-
+    
 def main():
     create_directories() 
     
@@ -270,7 +286,7 @@ def main():
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
-            "nav-link": { "border-radius": "0px","font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
+            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
             "nav-link-selected": { "border-radius": "0px","background": "#EAE9E9", "color": "#2b2b2b"},
         }
     )
@@ -362,6 +378,12 @@ def main():
                     translations[line] = line
             return translations
         
+        def load_data(file):
+            if file.name.endswith('.csv'):
+                return pd.read_csv(file)
+            elif file.name.endswith('.xlsx'):
+                return pd.read_excel(file, sheet_name=None)
+            
         def trigger_csv_download(data, filename):
             b64 = base64.b64encode(data).decode()
             components.html(f"""
@@ -610,32 +632,7 @@ def main():
         with st.container(height=400,border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-        
-        # 使用自定義 HTML 和 JavaScript 自動下載 ZIP 文件
-        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
-        components.html(f"""
-            <html>
-            <head>
-            <script type="text/javascript">
-                function downloadURI(uri, name) {{
-                    var link = document.createElement("a");
-                    link.href = uri;
-                    link.download = name;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }}
-                window.onload = function() {{
-                    var link = document.createElement("a");
-                    link.href = "data:application/zip;base64,{b64}";
-                    link.download = "執行結果.zip";
-                    link.click();
-                }}
-            </script>
-            </head>
-            </html>
-        """, height=0)
-        
+        trigger_download(st.session_state.zip_buffer, "output.zip")
         st.session_state.download_triggered = True
 
         
