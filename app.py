@@ -1,4 +1,3 @@
-
 import streamlit as st
 import fitz  # PyMuPDF
 import os
@@ -386,12 +385,6 @@ def main():
                 else:
                     translations[line] = line
             return translations
-
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
         
         def trigger_download(data, filename):
             b64 = base64.b64encode(data).decode()
