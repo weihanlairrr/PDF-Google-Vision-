@@ -1,3 +1,281 @@
+import streamlit as st
+import fitz  # PyMuPDF
+import os
+import shutil
+import zipfile
+import pandas as pd
+import io
+import aiohttp
+import asyncio
+import concurrent.futures
+import base64
+import tiktoken
+import streamlit_shadcn_ui as ui
+import streamlit.components.v1 as components
+
+from openai import OpenAI
+from google.cloud import vision
+from py_currency_converter import convert
+from streamlit_extras.stylable_container import stylable_container
+from streamlit_option_menu import option_menu
+
+with st.sidebar:
+    st.markdown(
+        """
+        <style>
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        }
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+        [data-testid='stFileUploader'] section button {
+            background: transparent !important;
+            color: #46474A !important;
+            border-radius: 5px;
+            border: none;
+            display: block;
+            margin: 0 auto;
+        }
+        [data-testid='stFileUploader'] section {
+            background: #ECECEC!important;
+            color: black !important;
+            padding: 0;
+        ;
+        }
+        [data-testid='stFileUploader'] section > input + div {
+            display: none;
+        }
+        [data-testid=stSidebar] {
+            background: #F9F9F9;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+def create_directories():
+    os.makedirs("static", exist_ok=True)
+    os.makedirs("temp", exist_ok=True)
+
+def clear_directory(directory):
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+    os.makedirs(directory, exist_ok=True)
+
+# 定義在PDF中搜尋文本並返回頁碼和矩形區域的函數
+def search_pdf(file, text):
+    doc = fitz.open(file)
+    res = []
+    for i, page in enumerate(doc):
+        insts = page.search_for(text)
+        for inst in insts:
+            res.append((i + 1, inst))
+    return res
+
+# 定義提取頁面特定區域作為圖片（全頁寬度），高解析度的函數
+def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
+    doc = fitz.open(file)
+    page = doc.load_page(page_num - 1)
+    mat = fitz.Matrix(z, z)
+    pw = page.rect.width
+    clip = fitz.Rect(0, rect.y0 + offset, pw, rect.y0 + offset + h)
+    pix = page.get_pixmap(matrix=mat, clip=clip)
+    img_path = os.path.join(out_dir, f"page_{page_num}.png")
+    pix.save(img_path)
+    return img_path
+
+# 定義重命名圖片文件的函數
+def rename_img(old_p, new_name):
+    new_p = os.path.join(os.path.dirname(old_p), new_name)
+    os.rename(old_p, new_p)
+    return new_p
+
+# 定義搜尋文本並提取對應區域作為全頁寬度圖片的函數
+def search_extract_img(file, text, out_dir, h, offset=0):
+    res = search_pdf(file, text)
+    if res:
+        page_num, rect = res[0]
+        img_p = extract_img(file, page_num, rect, out_dir, h=h, offset=offset)
+        new_img_p = rename_img(img_p, f"{text}.png")
+        return page_num, new_img_p
+    return None, None
+
+# 定義文本格式化函數
+def format_text(text):
+    lines = text.split('\n\n')
+    formatted_lines = [line.strip() for line in lines if line.strip()]
+    return '\n'.join(formatted_lines)
+
+# 使用 Google Vision API 提取文本
+def extract_text_from_image(img_path):
+    client = vision.ImageAnnotatorClient()
+    with io.open(img_path, 'rb') as image_file:
+        content = image_file.read()
+    image = vision.Image(content=content)
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    if texts:
+        return texts[0].description
+    return ""
+
+def trigger_download(zip_buffer, filename):
+    b64 = base64.b64encode(zip_buffer).decode()
+    components.html(f"""
+        <html>
+        <head>
+        <script type="text/javascript">
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                var link = document.createElement("a");
+                link.href = "data:application/zip;base64,{b64}";
+                link.download = "{filename}";
+                link.click();
+            }}
+        </script>
+        </head>
+        </html>
+    """, height=0)
+
+# 初始化 session state 變數
+if 'zip_buffer' not in st.session_state:
+    st.session_state.zip_buffer = None
+if 'zip_file_ready' not in st.session_state:
+    st.session_state.zip_file_ready = False
+if 'df_text' not in st.session_state:
+    st.session_state.df_text = pd.DataFrame()
+if 'pdf_file' not in st.session_state:
+    st.session_state.pdf_file = None
+if 'data_file' not in st.session_state:
+    st.session_state.data_file = None
+if 'json_file' not in st.session_state:
+    st.session_state.json_file = None
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = ""
+if 'height' not in st.session_state:
+    st.session_state.height = ""
+if 'symbol' not in st.session_state:
+    st.session_state.symbol = ""
+if 'height_map_str' not in st.session_state:
+    st.session_state.height_map_str = ""
+if 'height_map' not in st.session_state:
+    st.session_state.height_map = {}
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+if 'task_completed' not in st.session_state:
+    st.session_state.task_completed = False
+if 'download_triggered' not in st.session_state:
+    st.session_state.download_triggered = False
+if 'total_input_tokens' not in st.session_state:
+    st.session_state.total_input_tokens = 0
+if 'total_output_tokens' not in st.session_state:
+    st.session_state.total_output_tokens = 0
+
+async def fetch_gpt_response(session, api_key, text, prompt):
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": prompt.format(text)}]
+    }
+    async with session.post(url, headers=headers, json=payload) as response:
+        return await response.json()
+
+async def process_texts(api_key, texts, prompt, batch_size=10):
+    async with aiohttp.ClientSession() as session:
+        tasks = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            tasks.extend([fetch_gpt_response(session, api_key, text, prompt) for text in batch])
+            if tasks:
+                results = await asyncio.gather(*tasks)
+                for result, text in zip(results, batch):
+                    organized_text = result['choices'][0]['message']['content']
+                    formatted_text = format_text(organized_text)
+                    yield {"貨號": text, "文案": formatted_text}
+
+def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
+    total_files = len(texts)
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    progress_text.text("準備載入PDF與CSV文件")
+
+    for i, text in enumerate(texts):
+        page_num, img_p = search_extract_img(file, text, out_dir, h=h)
+        if img_p:
+            zipf.write(img_p, os.path.basename(img_p))
+        # 更新進度條
+        progress = (i + 1) / total_files
+        progress_bar.progress(progress)
+        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
+    progress_bar.empty()
+    progress_text.empty()
+
+# 定義搜尋多個文本並創建壓縮文件的函數，情況2
+def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
+    total_files = len(texts)
+    progress_bar = st.progress(0)
+    progress_text = st.empty()
+    progress_text.text("準備載入PDF與CSV文件")
+    
+    for i, text in enumerate(texts):
+        res = search_pdf(file, text)
+        if res:
+            page_num, rect = res[0]
+            doc = fitz.open(file)
+            page = doc.load_page(page_num - 1)
+            symbol_count = len(page.search_for(symbol))
+            height = height_map.get(symbol_count, 240)
+            img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
+            new_img_p = rename_img(img_p, f"{text}.png")
+            zipf.write(new_img_p, os.path.basename(new_img_p))
+        # 更新進度條
+        progress = (i + 1) / total_files
+        progress_bar.progress(progress)
+        progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
+    progress_bar.empty()
+    progress_text.empty()
+
+def update_api_key():
+    if st.session_state['api_key'] != st.session_state['api_key_input']:
+        st.session_state['api_key'] = st.session_state['api_key_input']
+        
+def update_height():
+    if st.session_state['height'] != st.session_state['height_input']:
+        st.session_state['height'] = st.session_state['height_input']
+
+def update_user_input():
+    if st.session_state['user_input'] != st.session_state['user_input_input']:
+        st.session_state['user_input'] = st.session_state['user_input_input']
+
+def update_symbol():
+    if st.session_state['symbol'] != st.session_state['symbol_input']:
+        st.session_state['symbol'] = st.session_state['symbol_input']
+
+def update_height_map_str():
+    if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
+        st.session_state['height_map_str'] = st.session_state['height_map_str_input']
+        height_map = {}
+        for item in st.session_state['height_map_str'].split("\n"):
+            if ":" in item: 
+                k, v = item.split(":")
+                height_map[int(k.strip())] = int(v.strip())
+        st.session_state['height_map'] = height_map
+
 def main():
     create_directories() 
     
@@ -32,7 +310,7 @@ def main():
                 popover = st.popover("文件上傳")
 
             pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader")
-            data_file = popover.file_uploader("上傳貨號檔 CSV/XLSX", type=["csv", "xlsx"], key="data_file_uploader")
+            data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader")
             json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
@@ -100,6 +378,12 @@ def main():
                 else:
                     translations[line] = line
             return translations
+
+        def load_data(file):
+            if file.name.endswith('.csv'):
+                return pd.read_csv(file)
+            elif file.name.endswith('.xlsx'):
+                return pd.read_excel(file, sheet_name=None)
         
         def trigger_download(data, filename):
             b64 = base64.b64encode(data).decode()
@@ -129,13 +413,13 @@ def main():
 
         col1,col2 = st.columns(2)
         with col1:
-            knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
+            knowledge_file = st.file_uploader("上傳翻譯對照表", type=["xlsx", "csv"])
             with st.expander("品名對照表 範例格式"):
                 example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
                 ui.table(example_knowledge_data)
         
         with col2:
-            test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
+            test_file = st.file_uploader("上傳需要翻譯的檔案", type=["xlsx", "csv"])
             with st.expander("翻譯品名 範例格式"):
                 example_test_data = pd.read_csv("翻譯品名範例格式.csv")
                 ui.table(example_test_data)
@@ -147,13 +431,6 @@ def main():
                 knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
             
             test_data = load_data(test_file)
-            
-            if isinstance(test_data, dict):
-                test_data = test_data[list(test_data.keys())[0]]
-                
-            if not isinstance(test_data, pd.DataFrame):
-                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
-                return
             
             translated_data = []
             
