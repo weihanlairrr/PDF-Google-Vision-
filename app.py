@@ -322,7 +322,7 @@ def main():
 
             pdf_file = popover.file_uploader("上傳商品型錄 PDF", type=["pdf"], key="pdf_file_uploader",help="記得先刪除封面、目錄和多餘頁面")
             data_file = popover.file_uploader("上傳貨號檔 CSV 或 XLSX", type=["csv", "xlsx"], key="data_file_uploader",help="貨號放A欄，且首列須為任意標題")
-            json_file = popover.file_uploader("上傳 Google Cloud 憑證", type=["json"], key="json_file_uploader")
+            json_file = popover.file_uploader("上傳 Google Cloud 憑證 JSON", type=["json"], key="json_file_uploader")
             st.write("\n")
             with stylable_container(
                 key="text_input_styles",
