@@ -2,7 +2,6 @@ import streamlit as st
 import fitz  # PyMuPDF
 import os
 import shutil
-import openpyxl
 import zipfile
 import pandas as pd
 import io
@@ -58,7 +57,7 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-
+                                        
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
@@ -68,7 +67,6 @@ def clear_directory(directory):
         shutil.rmtree(directory)
     os.makedirs(directory, exist_ok=True)
 
-# 定義在PDF中搜尋文本並返回頁碼和矩形區域的函數
 def search_pdf(file, text):
     doc = fitz.open(file)
     res = []
@@ -78,7 +76,6 @@ def search_pdf(file, text):
             res.append((i + 1, inst))
     return res
 
-# 定義提取頁面特定區域作為圖片（全頁寬度），高解析度的函數
 def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
     doc = fitz.open(file)
     page = doc.load_page(page_num - 1)
@@ -90,13 +87,11 @@ def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
     pix.save(img_path)
     return img_path
 
-# 定義重命名圖片文件的函數
 def rename_img(old_p, new_name):
     new_p = os.path.join(os.path.dirname(old_p), new_name)
     os.rename(old_p, new_p)
     return new_p
 
-# 定義搜尋文本並提取對應區域作為全頁寬度圖片的函數
 def search_extract_img(file, text, out_dir, h, offset=0):
     res = search_pdf(file, text)
     if res:
@@ -106,13 +101,11 @@ def search_extract_img(file, text, out_dir, h, offset=0):
         return page_num, new_img_p
     return None, None
 
-# 定義文本格式化函數
 def format_text(text):
     lines = text.split('\n\n')
     formatted_lines = [line.strip() for line in lines if line.strip()]
     return '\n'.join(formatted_lines)
 
-# 使用 Google Vision API 提取文本
 def extract_text_from_image(img_path):
     client = vision.ImageAnnotatorClient()
     with io.open(img_path, 'rb') as image_file:
@@ -124,6 +117,30 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
+def trigger_download(data, filename, filetype):
+    b64 = base64.b64encode(data).decode()
+    mime_type = "application/zip" if filetype == "zip" else "text/csv"
+    components.html(f"""
+        <html>
+        <head>
+        <script type="text/javascript">
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                downloadURI("data:{mime_type};base64,{b64}", "{filename}");
+            }}
+        </script>
+        </head>
+        <body>
+        </body>
+        </html>
+    """, height=0)
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -195,45 +212,58 @@ def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
         page_num, img_p = search_extract_img(file, text, out_dir, h=h)
         if img_p:
             zipf.write(img_p, os.path.basename(img_p))
-        # 更新進度條
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
     progress_bar.empty()
     progress_text.empty()
 
-# 定義搜尋多個文本並創建壓縮文件的函數，情況2
 def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
+
+    doc = fitz.open(file)
+    symbol_found = False
     
+    # 檢查整個文件是否包含 symbol
+    for page in doc:
+        if page.search_for(symbol):
+            symbol_found = True
+            break
+
+    if not symbol_found:
+        st.warning(f"無法在PDF中找到 \"{symbol}\"")
+        return
+
     for i, text in enumerate(texts):
         res = search_pdf(file, text)
         if res:
             page_num, rect = res[0]
-            doc = fitz.open(file)
             page = doc.load_page(page_num - 1)
             symbol_count = len(page.search_for(symbol))
             height = height_map.get(symbol_count, 240)
             img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
             new_img_p = rename_img(img_p, f"{text}.png")
             zipf.write(new_img_p, os.path.basename(new_img_p))
-        # 更新進度條
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
+    
     progress_bar.empty()
     progress_text.empty()
+
 
 def update_api_key():
     if st.session_state['api_key'] != st.session_state['api_key_input']:
         st.session_state['api_key'] = st.session_state['api_key_input']
         
 def update_height():
-    if st.session_state['height'] != st.session_state['height_input']:
-        st.session_state['height'] = st.session_state['height_input']
+    try:
+        st.session_state['height'] = int(st.session_state['height_input'])
+    except ValueError:
+        st.session_state.height_errors = f"無效的指定截圖高度: {st.session_state['height_input']}"
 
 def update_user_input():
     if st.session_state['user_input'] != st.session_state['user_input_input']:
@@ -244,21 +274,19 @@ def update_symbol():
         st.session_state['symbol'] = st.session_state['symbol_input']
 
 def update_height_map_str():
+    st.session_state.height_map_errors = []  # 用於存放高度對應的錯誤訊息
     if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
         st.session_state['height_map_str'] = st.session_state['height_map_str_input']
         height_map = {}
         for item in st.session_state['height_map_str'].split("\n"):
-            if ":" in item: 
-                k, v = item.split(":")
-                height_map[int(k.strip())] = int(v.strip())
+            if ":" in item:
+                try:
+                    k, v = item.split(":")
+                    height_map[int(k.strip())] = int(v.strip())
+                except ValueError:
+                    st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-
-def load_data(file):
-    if file.name.endswith('.csv'):
-        return pd.read_csv(file)
-    elif file.name.endswith('.xlsx'):
-        return pd.read_excel(file, sheet_name=None)
-
+    
 def main():
     create_directories() 
     
@@ -270,7 +298,7 @@ def main():
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
-            "nav-link": { "border-radius": "0px","font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
+            "nav-link": {"font-size": "17px","color": "#46474A", "text-align": "left", "margin":"0px", "--hover-color": "#f0f0f0"},
             "nav-link-selected": { "border-radius": "0px","background": "#EAE9E9", "color": "#2b2b2b"},
         }
     )
@@ -306,7 +334,6 @@ def main():
                 ):
                 api_key = st.text_input("輸入 OpenAI API Key", type="password",key="api_key_input",on_change=update_api_key,value=st.session_state.api_key)
 
-            # 將已上傳的文件存入 session state
             if pdf_file:
                 st.session_state.pdf_file = pdf_file
             if data_file:
@@ -316,7 +343,6 @@ def main():
             if api_key:
                 st.session_state.api_key = api_key
 
-        # 從 session state 中獲取文件
         pdf_file = st.session_state.get('pdf_file', None)
         data_file = st.session_state.get('data_file', None)
         json_file = st.session_state.get('json_file', None)
@@ -352,7 +378,6 @@ def main():
             for line in lines:
                 if '：' in line:
                     type_name, eng_name = line.split('：', 1)
-                    # Find corresponding Chinese name from the knowledge base
                     matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
                     if not matching_row.empty:
                         translations[type_name] = matching_row.iloc[0]['中文名稱']
@@ -362,31 +387,11 @@ def main():
                     translations[line] = line
             return translations
         
-        def trigger_csv_download(data, filename):
-            b64 = base64.b64encode(data).decode()
-            components.html(f"""
-                <html>
-                <head>
-                <script type="text/javascript">
-                    function downloadURI(uri, name) {{
-                        var link = document.createElement("a");
-                        link.href = uri;
-                        link.download = name;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                    }}
-                    window.onload = function() {{
-                        var link = document.createElement("a");
-                        link.href = "data:text/csv;base64,{b64}";
-                        link.download = "{filename}";
-                        link.click();
-                    }}
-                </script>
-                </head>
-                </html>
-            """, height=0)
-            st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
+        def load_data(file):
+            if file.name.endswith('.csv'):
+                return pd.read_csv(file)
+            elif file.name.endswith('.xlsx'):
+                return pd.read_excel(file, sheet_name=None)
 
         col1,col2 = st.columns(2)
         with col1:
@@ -434,7 +439,7 @@ def main():
             csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
             csv_data = csv.encode('utf-8-sig')
 
-            trigger_csv_download(csv_data, '翻譯結果.csv')
+            trigger_download(csv_data, '翻譯結果.csv', 'csv')
             
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
@@ -446,12 +451,10 @@ def main():
             ],
         )
         
-        # 使用 tiktoken 計算 tokens 數量
         encoding = tiktoken.encoding_for_model("gpt-4")
         input_tokens = len(encoding.encode(prompt))
         output_tokens = len(encoding.encode(response.choices[0].message.content))
         
-        # 將 tokens 計數存入 session_state
         st.session_state.total_input_tokens += input_tokens
         st.session_state.total_output_tokens += output_tokens
         
@@ -478,7 +481,6 @@ def main():
                 missing_fields.append("對應的截圖高度")
         return missing_fields
     
-    # 檢查所有必需字段是否已填寫
     missing_fields = check_required_fields()
     if selected != "品名翻譯":
         with stylable_container(
@@ -502,11 +504,9 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                # 重置輸入和輸出 tokens 計數
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
     
-                # 清除之前的顯示內容
                 st.session_state.task_completed = False
                 st.session_state.download_triggered = False
                 st.session_state.zip_buffer = None
@@ -543,6 +543,18 @@ def main():
                     if selected == "每頁商品數固定":
                         search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
                     elif selected == "每頁商品數不固定":
+                        doc = fitz.open(pdf_path)
+                        symbol_found = False
+
+                        for page in doc:
+                            if page.search_for(st.session_state.symbol):
+                                symbol_found = True
+                                break
+
+                        if not symbol_found:
+                            st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
+                            return
+
                         search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
     
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
@@ -610,34 +622,8 @@ def main():
         with st.container(height=400,border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-        
-        # 使用自定義 HTML 和 JavaScript 自動下載 ZIP 文件
-        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
-        components.html(f"""
-            <html>
-            <head>
-            <script type="text/javascript">
-                function downloadURI(uri, name) {{
-                    var link = document.createElement("a");
-                    link.href = uri;
-                    link.download = name;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }}
-                window.onload = function() {{
-                    var link = document.createElement("a");
-                    link.href = "data:application/zip;base64,{b64}";
-                    link.download = "執行結果.zip";
-                    link.click();
-                }}
-            </script>
-            </head>
-            </html>
-        """, height=0)
-        
+        trigger_download(st.session_state.zip_buffer, "output.zip", "zip")
         st.session_state.download_triggered = True
 
-        
 if __name__ == "__main__":
     main()
