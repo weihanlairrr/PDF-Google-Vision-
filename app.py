@@ -20,6 +20,45 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
+with st.sidebar:
+    st.markdown(
+        """
+        <style>
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        }
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+        [data-testid='stFileUploader'] section button {
+            background: transparent !important;
+            color: #46474A !important;
+            border-radius: 5px;
+            border: none;
+            display: block;
+            margin: 0 auto;
+        }
+        [data-testid='stFileUploader'] section {
+            background: #ECECEC!important;
+            color: black !important;
+            padding: 0;
+        ;
+        }
+        [data-testid='stFileUploader'] section > input + div {
+            display: none;
+        }
+        [data-testid=stSidebar] {
+            background: #F9F9F9;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
@@ -87,16 +126,28 @@ def extract_text_from_image(img_path):
 
 def trigger_download(zip_buffer, filename):
     b64 = base64.b64encode(zip_buffer).decode()
-    href = f'<a id="download_link" href="data:application/zip;base64,{b64}" download="{filename}">下載結果</a>'
-    st.markdown(href, unsafe_allow_html=True)
-    st.markdown(
-        """
+    components.html(f"""
+        <html>
+        <head>
         <script type="text/javascript">
-            document.getElementById("download_link").click();
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                var link = document.createElement("a");
+                link.href = "data:application/zip;base64,{b64}";
+                link.download = "{filename}";
+                link.click();
+            }}
         </script>
-        """,
-        unsafe_allow_html=True
-    )
+        </head>
+        </html>
+    """, height=0)
 
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
@@ -576,7 +627,7 @@ def main():
             
         st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
         st.divider()
-        col1,col2,col3 = st.columns(3)
+        col1,col2,col3 =st.columns(3)
         with col1:
             ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
         with col2:
@@ -588,8 +639,31 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         
-        # 使用自動下載功能
-        trigger_download(st.session_state.zip_buffer, "output.zip")
+        # 使用自定義 HTML 和 JavaScript 自動下載 ZIP 文件
+        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
+        components.html(f"""
+            <html>
+            <head>
+            <script type="text/javascript">
+                function downloadURI(uri, name) {{
+                    var link = document.createElement("a");
+                    link.href = uri;
+                    link.download = name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }}
+                window.onload = function() {{
+                    var link = document.createElement("a");
+                    link.href = "data:application/zip;base64,{b64}";
+                    link.download = "output.zip";
+                    link.click();
+                }}
+            </script>
+            </head>
+            </html>
+        """, height=0)
+        
         st.session_state.download_triggered = True
 
         
