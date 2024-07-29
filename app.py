@@ -287,7 +287,7 @@ def main():
     create_directories() 
     
     with st.sidebar:
-        with ui.stylable_container(
+        with stylable_container(
                 key="logo_container",
                 css_styles="""
                     img {
