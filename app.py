@@ -268,10 +268,7 @@ def update_api_key():
         st.session_state['api_key'] = st.session_state['api_key_input']
         
 def update_height():
-    try:
-        st.session_state['height'] = int(st.session_state['height_input'])
-    except ValueError:
-        st.session_state.height_errors = f"無效的指定截圖高度: {st.session_state['height_input']}"
+    st.session_state['height'] = int(st.session_state['height_input'])
 
 def update_user_input():
     if st.session_state['user_input'] != st.session_state['user_input_input']:
