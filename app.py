@@ -613,6 +613,9 @@ def main():
                     st.write("##### 成果預覽")
                     ui.table(st.session_state.df_text)
 
+                def mark_download():
+                    st.session_state.download_clicked = True
+                    
                 st.download_button(
                     label="下載 ZIP 檔案",
                     data= st.session_state.zip_buffer,
