@@ -615,7 +615,7 @@ def main():
             file_name="output.zip",
             mime="application/zip"
     )
-    st.session_state.download_triggered = True
+    st.session_state.download_triggered = False
 
 if __name__ == "__main__":
     main()
