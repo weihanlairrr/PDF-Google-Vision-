@@ -468,7 +468,7 @@ def main():
         
         return response.choices[0].message.content
     
-    def check_required_fields():
+    def check_required_fields(options):
         missing_fields = []
         if not pdf_file:
             missing_fields.append("PDF")
@@ -480,15 +480,17 @@ def main():
             missing_fields.append("OpenAI API Key")
         if not st.session_state.user_input:
             missing_fields.append("給 ChatGPT 的 Prompt")
-        if options == "每頁商品數固定" and not st.session_state.height:
+        if selected == "PDF截圖與AI文案" and options == "每頁商品數固定" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
-        if options == "每頁商品數不固定":
+        if selected == "PDF截圖與AI文案" and options == "每頁商品數不固定":
             if not st.session_state.symbol:
                 missing_fields.append("用來判斷截圖高度的符號或文字")
             if not st.session_state.height_map:
                 missing_fields.append("對應的截圖高度")
         return missing_fields
     
+    missing_fields = check_required_fields(options)
+
     missing_fields = check_required_fields()
     if selected != "品名翻譯":
         with stylable_container(
