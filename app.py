@@ -413,45 +413,45 @@ def main():
                 example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
         
-    if knowledge_file and test_file:
-        knowledge_data = load_data(knowledge_file)
-        if isinstance(knowledge_data, dict):
-            knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
-    
-        test_data = load_data(test_file)
-    
-        if isinstance(test_data, dict):
-            test_data = test_data[list(test_data.keys())[0]]
-    
-        if not isinstance(test_data, pd.DataFrame):
-            st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
-            return
-    
-        translated_data = []
-    
-        column_names = test_data.columns.to_list()
-    
-        for index, row in test_data.iterrows():
-            product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
-            product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
-            translated_data.append(product_translations)
-    
-        translated_df = pd.DataFrame(translated_data)
-    
-        st.divider()
-        st.write("翻譯結果")
-        with st.container(height=400, border=None):
-            ui.table(translated_df)
-    
-        csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
-        csv_data = csv.encode('utf-8-sig')
-    
-        st.download_button(
-            label="下載 CSV 檔案",
-            data=csv_data,
-            file_name="翻譯結果.csv",
-            mime="text/csv"
-        )
+        if knowledge_file and test_file:
+            knowledge_data = load_data(knowledge_file)
+            if isinstance(knowledge_data, dict):
+                knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
+        
+            test_data = load_data(test_file)
+        
+            if isinstance(test_data, dict):
+                test_data = test_data[list(test_data.keys())[0]]
+        
+            if not isinstance(test_data, pd.DataFrame):
+                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
+                return
+        
+            translated_data = []
+        
+            column_names = test_data.columns.to_list()
+        
+            for index, row in test_data.iterrows():
+                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
+                product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
+                translated_data.append(product_translations)
+        
+            translated_df = pd.DataFrame(translated_data)
+        
+            st.divider()
+            st.write("翻譯結果")
+            with st.container(height=400, border=None):
+                ui.table(translated_df)
+        
+            csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
+            csv_data = csv.encode('utf-8-sig')
+        
+            st.download_button(
+                label="下載 CSV 檔案",
+                data=csv_data,
+                file_name="翻譯結果.csv",
+                mime="text/csv"
+            )
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
