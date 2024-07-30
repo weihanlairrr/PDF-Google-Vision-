@@ -595,8 +595,6 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
-        st.toast("執行完成 🥳")
         st.divider()
     
         if options == "每頁商品數固定":
