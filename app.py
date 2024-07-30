@@ -624,6 +624,12 @@ def main():
                     )
                 else:
                     st.divider()
+                    st.download_button(
+                        label="下載 ZIP 檔案",
+                        data= st.session_state.zip_buffer,
+                        file_name="output.zip",
+                        mime="application/zip"
+                    )
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
@@ -636,12 +642,6 @@ def main():
                         st.write("##### 成果預覽")
                         ui.table(st.session_state.df_text)
                     
-                    st.download_button(
-                        label="下載 ZIP 檔案",
-                        data= st.session_state.zip_buffer,
-                        file_name="output.zip",
-                        mime="application/zip"
-                    )
 
 if __name__ == "__main__":
     main()
