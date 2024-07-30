@@ -374,15 +374,16 @@ def main():
         st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
         st.write("\n")
         st.write("\n")
+        
         def translate_product_name(product_name, knowledge_data):
             translations = {}
             lines = product_name.split('\n')
             for line in lines:
                 if '：' in line:
                     type_name, eng_name = line.split('：', 1)
-                    matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
+                    matching_row = knowledge_data[(knowledge_data.iloc[:, 0] == type_name) & (knowledge_data.iloc[:, 1].str.lower() == eng_name.strip().lower())]
                     if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[0]['中文名稱']
+                        translations[type_name] = matching_row.iloc[0, 2]
                     else:
                         translations[type_name] = eng_name.strip()
                 else:
@@ -394,8 +395,8 @@ def main():
                 return pd.read_csv(file)
             elif file.name.endswith('.xlsx'):
                 return pd.read_excel(file, sheet_name=None)
-
-        col1,col2 = st.columns(2)
+    
+        col1, col2 = st.columns(2)
         with col1:
             knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
             with st.expander("品名對照表 範例格式"):
@@ -411,7 +412,7 @@ def main():
                 ui.table(example_test_data)
                 example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
                 st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
-    
+        
         if knowledge_file and test_file:
             knowledge_data = load_data(knowledge_file)
             if isinstance(knowledge_data, dict):
@@ -444,7 +445,7 @@ def main():
                 
             csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
             csv_data = csv.encode('utf-8-sig')
-
+    
             trigger_download(csv_data, '翻譯結果.csv', 'csv')
             
     def organize_text_with_gpt(text, api_key):
