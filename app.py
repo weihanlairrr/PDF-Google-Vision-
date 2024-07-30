@@ -345,10 +345,6 @@ def main():
             col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
     elif selected == "品名翻譯":
-        st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
-        st.write("\n")
-        st.write("\n")
-        
         def translate_product_name(product_name, knowledge_data):
             translations = {}
             lines = product_name.split('\n')
