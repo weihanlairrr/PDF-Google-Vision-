@@ -125,6 +125,31 @@ def extract_text_from_image(img_path):
         return texts[0].description
     return ""
 
+def trigger_download(data, filename, filetype):
+    b64 = base64.b64encode(data).decode()
+    mime_type = "application/zip" if filetype == "zip" else "text/csv"
+    components.html(f"""
+        <html>
+        <head>
+        <script type="text/javascript">
+            function downloadURI(uri, name) {{
+                var link = document.createElement("a");
+                link.href = uri;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }}
+            window.onload = function() {{
+                downloadURI("data:{mime_type};base64,{b64}", "{filename}");
+            }}
+        </script>
+        </head>
+        <body>
+        </body>
+        </html>
+    """, height=0)
+
 # 初始化 session state 變數
 if 'zip_buffer' not in st.session_state:
     st.session_state.zip_buffer = None
@@ -391,42 +416,37 @@ def main():
             knowledge_data = load_data(knowledge_file)
             if isinstance(knowledge_data, dict):
                 knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
-        
+            
             test_data = load_data(test_file)
-        
+            
             if isinstance(test_data, dict):
                 test_data = test_data[list(test_data.keys())[0]]
-        
+                
             if not isinstance(test_data, pd.DataFrame):
                 st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
                 return
-        
+            
             translated_data = []
-        
+            
             column_names = test_data.columns.to_list()
-        
+            
             for index, row in test_data.iterrows():
                 product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
                 product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
                 translated_data.append(product_translations)
-        
+            
             translated_df = pd.DataFrame(translated_data)
-        
+            
             st.divider()
             st.write("翻譯結果")
             with st.container(height=400, border=None):
                 ui.table(translated_df)
-        
+                
             csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
             csv_data = csv.encode('utf-8-sig')
-        
-            st.download_button(
-                label="下載 CSV 檔案",
-                data=csv_data,
-                file_name="翻譯結果.csv",
-                mime="text/csv"
-            )
 
+            trigger_download(csv_data, '翻譯結果.csv', 'csv')
+            
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
         prompt = f"'''{text} '''{st.session_state.user_input}"
@@ -589,32 +609,27 @@ def main():
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
             return result['TWD']
-    
+
         input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
+            
         st.toast("執行完成 🥳 檔案已自動下載至您的電腦")
         st.divider()
-        col1, col2, col3 = st.columns(3)
+        col1,col2,col3 =st.columns(3)
         with col1:
             ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
         with col2:
             ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
-    
-        with st.container(height=400, border=None):
+            
+        with st.container(height=400,border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-        
-        st.download_button(
-            label="下載 ZIP 檔案",
-            data=st.session_state.zip_buffer,
-            file_name="output.zip",
-            mime="application/zip"
-        )
+        trigger_download(st.session_state.zip_buffer, "output.zip", "zip")
+        st.session_state.download_triggered = True
 
 if __name__ == "__main__":
     main()
