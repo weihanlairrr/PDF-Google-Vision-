@@ -152,8 +152,6 @@ if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
-if 'download_triggered' not in st.session_state:
-    st.session_state.download_triggered = False
 if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
@@ -427,7 +425,6 @@ def main():
                 file_name="翻譯結果.csv",
                 mime="text/csv"
             )
-            st.session_state.download_triggered = True
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
@@ -497,7 +494,6 @@ def main():
                 st.session_state.total_output_tokens = 0
     
                 st.session_state.task_completed = False
-                st.session_state.download_triggered = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
                 st.session_state.df_text = pd.DataFrame()
@@ -587,7 +583,7 @@ def main():
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
 
-        if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
+        if st.session_state.task_completed and st.session_state.zip_file_ready:
             def usd_to_twd(usd_amount):
                 result = convert(base='USD', amount=usd_amount, to=['TWD'])
                 return result['TWD']
@@ -610,13 +606,12 @@ def main():
                 st.write("##### 成果預覽")
                 ui.table(st.session_state.df_text)
                 
-            st.download_button(
-                    label="下載 ZIP 檔案",
-                    data= st.session_state.zip_buffer,
-                    file_name="output.zip",
-                    mime="application/zip"
+        st.download_button(
+                label="下載 ZIP 檔案",
+                data= st.session_state.zip_buffer,
+                file_name="output.zip",
+                mime="application/zip"
             )
-            st.session_state.download_triggered = True
 
 if __name__ == "__main__":
     main()
