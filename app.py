@@ -468,7 +468,7 @@ def main():
         
         return response.choices[0].message.content
     
-    def check_required_fields(options):
+    def check_required_fields():
         missing_fields = []
         if not pdf_file:
             missing_fields.append("PDF")
@@ -489,8 +489,6 @@ def main():
                 missing_fields.append("對應的截圖高度")
         return missing_fields
     
-    missing_fields = check_required_fields(options)
-
     missing_fields = check_required_fields()
     if selected != "品名翻譯":
         with stylable_container(
