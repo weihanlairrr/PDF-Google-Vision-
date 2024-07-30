@@ -158,8 +158,6 @@ if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
     st.session_state.total_output_tokens = 0
-if 'show_download_button' not in st.session_state:
-    st.session_state.show_download_button = False
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -269,13 +267,7 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-
-def reset_task_state():
-    st.session_state.task_completed = False
-    st.session_state.download_triggered = False
-    st.session_state.zip_file_ready = False
-    st.session_state.show_download_button = False
-
+    
 def main():
     create_directories() 
     
@@ -496,7 +488,6 @@ def main():
             start_running = st.button("開始執行", key="run_btn")
 
         if start_running:
-            reset_task_state()
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
@@ -594,10 +585,8 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-                st.session_state.show_download_button = True
 
-    if st.session_state.task_completed and st.session_state.zip_file_ready:
-        # 成本計算和顯示
+    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
             return result['TWD']
@@ -620,14 +609,12 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         
-        if st.session_state.show_download_button:
-            st.download_button(
-                label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip",
-                on_click=lambda: st.session_state.update({"download_triggered": True})
-            )
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
 
 if __name__ == "__main__":
     main()
