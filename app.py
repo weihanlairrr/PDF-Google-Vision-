@@ -585,7 +585,6 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-                st.experimental_rerun()  # 立即重新渲染頁面，隱藏下載按鈕
     
     if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
