@@ -492,7 +492,6 @@ def main():
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
-    
                 st.session_state.task_completed = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
