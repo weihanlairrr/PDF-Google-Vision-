@@ -34,20 +34,6 @@ with st.sidebar:
         .stDownloadButton button:hover {
             background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
         }
-        .custom-download-button {
-            background-color: #46474A !important;
-            color: #f5f5f5 !important;
-            border: none;
-            padding: 0.5em 1em;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 5px;
-            text-align: center;
-            transition: background-color 0.3s;
-        }
-        .custom-download-button:hover {
-            background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
-        }
         .centered {
             display: flex;
             justify-content: center;
@@ -505,7 +491,6 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
@@ -600,19 +585,18 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-
-    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
-        st.session_state.download_triggered = True  # 確保按鈕點擊後不會閃爍
+                st.experimental_rerun()  # 立即重新渲染頁面，隱藏下載按鈕
     
+    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
             return result['TWD']
-        
+    
         input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
+
         st.divider()
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -621,14 +605,18 @@ def main():
             ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
         with col3:
             ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
-        
+    
         with st.container(height=400, border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         
-        b64 = base64.b64encode(st.session_state.zip_buffer).decode()
-        href = f'<a href="data:application/zip;base64,{b64}" download="output.zip" class="custom-download-button">下載 ZIP 檔案</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
+        st.stop()  
 
 if __name__ == "__main__":
     main()
