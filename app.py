@@ -152,8 +152,6 @@ if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
-if 'download_triggered' not in st.session_state:
-    st.session_state.download_triggered = False
 if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
@@ -345,6 +343,7 @@ def main():
             col1, col2 = st.columns([1,1.9])
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+    
     elif selected == "品名翻譯":
         st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
         st.write("\n")
@@ -412,21 +411,31 @@ def main():
                 translated_data.append(product_translations)
         
             translated_df = pd.DataFrame(translated_data)
-        
-            st.divider()
-            st.write("翻譯結果")
-            with st.container(height=400, border=None):
+
+            placeholder1 = st.empty()
+            placeholder2 = st.empty()
+            placeholder3 = st.empty()
+
+            with placeholder1.container():
+                st.divider()
+                st.write("翻譯結果")
+                
+            with placeholder2.container(height=400, border=None):
                 ui.table(translated_df)
-        
-            csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
-            csv_data = csv.encode('utf-8-sig')
-        
-            st.download_button(
-                label="下載 CSV 檔案",
-                data=csv_data,
-                file_name="翻譯結果.csv",
-                mime="text/csv"
-            )
+
+            with placeholder3.container():
+                csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
+                csv_data = csv.encode('utf-8-sig')
+                下載csv = st.download_button(
+                    label="下載 CSV 檔案",
+                    data=csv_data,
+                    file_name="翻譯結果.csv",
+                    mime="text/csv"
+                )
+            if  下載csv:
+                placeholder1.empty()
+                placeholder2.empty()
+                placeholder3.empty()
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
@@ -496,7 +505,6 @@ def main():
                 st.session_state.total_output_tokens = 0
     
                 st.session_state.task_completed = False
-                st.session_state.download_triggered = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
                 st.session_state.df_text = pd.DataFrame()
@@ -586,7 +594,7 @@ def main():
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
 
-                if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
+                if st.session_state.task_completed and st.session_state.zip_file_ready:
                     def usd_to_twd(usd_amount):
                         result = convert(base='USD', amount=usd_amount, to=['TWD'])
                         return result['TWD']
