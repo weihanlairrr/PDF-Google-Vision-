@@ -412,15 +412,19 @@ def main():
                 translated_data.append(product_translations)
         
             translated_df = pd.DataFrame(translated_data)
-        
-            st.divider()
-            st.write("翻譯結果")
+
             placeholder1 = st.empty()
             placeholder2 = st.empty()
-            with placeholder1.container(height=400, border=None):
+            placeholder3 = st.empty()
+
+            with placeholder1.container():
+                st.divider()
+                st.write("翻譯結果")
+                
+            with placeholder2.container(height=400, border=None):
                 ui.table(translated_df)
 
-            with placeholder2.container():
+            with placeholder3.container():
                 csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
                 csv_data = csv.encode('utf-8-sig')
                 下載csv = st.download_button(
@@ -432,6 +436,7 @@ def main():
             if  下載csv:
                 placeholder1.empty()
                 placeholder2.empty()
+                placeholder3.empty()
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
