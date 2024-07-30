@@ -613,10 +613,12 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
     
-        zip_buffer = st.session_state.zip_buffer
-        b64 = base64.b64encode(zip_buffer).decode()
-        href = f'<a href="data:application/zip;base64,{b64}" download="output.zip">下載 ZIP 檔案</a>'
-        st.markdown(href, unsafe_allow_html=True)
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
     
         # 更新下載按鈕狀態
         update_download_triggered(True)
