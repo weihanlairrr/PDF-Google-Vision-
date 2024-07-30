@@ -492,7 +492,6 @@ def main():
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
                 st.write('\n')
-                st.session_state.task_completed = True
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
     
@@ -586,7 +585,7 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-
+    
     if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
@@ -616,7 +615,7 @@ def main():
             file_name="output.zip",
             mime="application/zip"
         )
-        st.stop() 
+        st.stop()
 
 if __name__ == "__main__":
     main()
