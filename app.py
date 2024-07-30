@@ -158,8 +158,6 @@ if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
     st.session_state.total_output_tokens = 0
-if 'download_clicked' not in st.session_state:
-    st.session_state.download_clicked = False
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -493,29 +491,28 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                st.session_state.download_clicked = False
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
-    
+        
                 st.session_state.task_completed = False
                 st.session_state.download_triggered = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
                 st.session_state.df_text = pd.DataFrame()
-    
+        
                 temp_dir = "temp"
                 output_dir = os.path.join(temp_dir, "output")
                 clear_directory(output_dir)  
-    
+        
                 pdf_path = os.path.join(temp_dir, pdf_file.name)
                 with open(pdf_path, "wb") as f:
                     f.write(pdf_file.getbuffer())
-    
+        
                 data_path = os.path.join(temp_dir, data_file.name)
                 with open(data_path, "wb") as f:
                     f.write(data_file.getbuffer())
-    
+        
                 try:
                     if data_file.name.endswith('.csv'):
                         df = pd.read_csv(data_path, encoding='utf-8')
@@ -526,9 +523,9 @@ def main():
                         df = pd.read_csv(data_path, encoding='latin1')
                     else:
                         df = pd.read_excel(data_path, engine='openpyxl')
-    
+        
                 texts = df.iloc[:, 0].tolist()
-    
+        
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                     if options == "每頁商品數固定":
@@ -536,18 +533,18 @@ def main():
                     elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
-
+        
                         for page in doc:
                             if page.search_for(st.session_state.symbol):
                                 symbol_found = True
                                 break
-
+        
                         if not symbol_found:
                             st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
                             return
-
+        
                         search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
-    
+        
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                     data = []
                     total_files = len(image_files)
@@ -555,7 +552,7 @@ def main():
                     progress_bar = st.progress(0)
                     progress_text = st.empty()
                     progress_text.text("準備載入截圖")
-    
+        
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         futures = {executor.submit(extract_text_from_image, os.path.join(output_dir, image_file)): image_file for image_file in image_files}
                         for future in concurrent.futures.as_completed(futures):
@@ -567,62 +564,59 @@ def main():
                                 data.append({"貨號": os.path.splitext(image_file)[0], "圖片內容": text, "文案": formatted_text})
                             except Exception as exc:
                                 print(f'{image_file} generated an exception: {exc}')
-    
+        
                             progress = len(data) / total_files
                             progress_bar.progress(progress)
                             progress_text.text(f"正在提取圖片文字與撰寫文案: {image_file} ({len(data)}/{total_files})")
-    
+        
                     progress_bar.empty()
                     progress_text.empty()
-    
+        
                     df_text = pd.DataFrame(data)
                     csv_buffer = io.StringIO()
                     df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
                     csv_data = csv_buffer.getvalue().encode('utf-8-sig')
-    
+        
                     zipf.writestr("文字提取結果與文案.csv", csv_data)
-    
+        
                 zip_buffer.seek(0)
-    
+        
                 st.session_state.zip_buffer = zip_buffer.getvalue()
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-
+        
         if st.session_state.task_completed and st.session_state.zip_file_ready:
-            if not st.session_state.download_clicked:
-                def usd_to_twd(usd_amount):
-                    result = convert(base='USD', amount=usd_amount, to=['TWD'])
-                    return result['TWD']
+            def usd_to_twd(usd_amount):
+                result = convert(base='USD', amount=usd_amount, to=['TWD'])
+                return result['TWD']
         
-                input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
-                output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
-                total_cost_usd = input_cost + output_cost
-                total_cost_twd = usd_to_twd(total_cost_usd)
+            input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
+            output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
+            total_cost_usd = input_cost + output_cost
+            total_cost_twd = usd_to_twd(total_cost_usd)
         
-                st.divider()
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-                with col2:
-                    ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-                with col3:
-                    ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
+            st.divider()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
+            with col2:
+                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
+            with col3:
+                ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
         
-                with st.container(height=400, border=None):
-                    st.write("##### 成果預覽")
-                    ui.table(st.session_state.df_text)
+            with st.container(height=400, border=None):
+                st.write("##### 成果預覽")
+                ui.table(st.session_state.df_text)
+        
+            st.download_button(
+                label="下載 ZIP 檔案",
+                data=st.session_state.zip_buffer,
+                file_name="output.zip",
+                mime="application/zip",
+                key="download_button"
+            )
 
-                def mark_download():
-                    st.session_state.download_clicked = True
-                    
-                st.download_button(
-                    label="下載 ZIP 檔案",
-                    data= st.session_state.zip_buffer,
-                    file_name="output.zip",
-                    mime="application/zip",
-                    on_click=mark_download
-                )
-                
+
 if __name__ == "__main__":
     main()
