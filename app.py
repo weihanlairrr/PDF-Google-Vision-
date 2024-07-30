@@ -301,8 +301,8 @@ def main():
     with st.sidebar:
         st.image("Image/91APP_logo.png")
         selected = option_menu("",
-        ["每頁商品數固定",'每頁商品數不固定','品名翻譯'],
-        icons=['caret-right-fill','caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
+        ["PDF截圖與AI文案生成",'品名翻譯'],
+        icons=['caret-right-fill','caret-right-fill'], menu_icon="robot", default_index=0,
         styles={
             "container": {"padding": "0!important", "background": "#F9F9F9","border-radius": "0px"},
             "icon": {"padding": "0px 10px 0px 0px !important","color": "#FF8C00", "font-size": "17px"},
@@ -362,20 +362,22 @@ def main():
             f.write(json_file.getbuffer())
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
-    if selected == "每頁商品數固定":
-        st.markdown('<div class="centered"><h2>商運  PDF截圖與AI文案生成工具</h2></div>', unsafe_allow_html=True)
-        st.write("\n")
-        st.write("\n")
-        st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        st.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
-    elif selected == "每頁商品數不固定":
-        st.markdown('<div class="centered"><h2>商運  PDF截圖與AI文案生成工具</h2></div>', unsafe_allow_html=True)
-        st.write("\n")
-        st.write("\n")
-        st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
-        col1, col2 = st.columns([1,1.9])
-        col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-        col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+    if selected == "PDF截圖與AI文案生成":
+        options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數不固定, key="tabs")
+        if options == "每頁商品數固定":
+            st.markdown('<div class="centered"><h2>商運  PDF截圖與AI文案生成工具</h2></div>', unsafe_allow_html=True)
+            st.write("\n")
+            st.write("\n")
+            st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+            st.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+        elif  options == "每頁商品數不固定":
+            st.markdown('<div class="centered"><h2>商運  PDF截圖與AI文案生成工具</h2></div>', unsafe_allow_html=True)
+            st.write("\n")
+            st.write("\n")
+            st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
+            col1, col2 = st.columns([1,1.9])
+            col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+            col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     elif selected == "品名翻譯":
         st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
         st.write("\n")
