@@ -372,8 +372,125 @@ def main():
             col1, col2 = st.columns([1,1.9])
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+    elif selected == "品名翻譯":
+        st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
+        st.write("\n")
+        st.write("\n")
+        def translate_product_name(product_name, knowledge_data):
+            translations = {}
+            lines = product_name.split('\n')
+            for line in lines:
+                if '：' in line:
+                    type_name, eng_name = line.split('：', 1)
+                    matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
+                    if not matching_row.empty:
+                        translations[type_name] = matching_row.iloc[0]['中文名稱']
+                    else:
+                        translations[type_name] = eng_name.strip()
+                else:
+                    translations[line] = line
+            return translations
         
-        missing_fields = check_required_fields()
+        def load_data(file):
+            if file.name.endswith('.csv'):
+                return pd.read_csv(file)
+            elif file.name.endswith('.xlsx'):
+                return pd.read_excel(file, sheet_name=None)
+
+        col1,col2 = st.columns(2)
+        with col1:
+            knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
+            with st.expander("品名對照表 範例格式"):
+                example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
+                ui.table(example_knowledge_data)
+                example_knowledge_csv = example_knowledge_data.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="下載範例檔案", data=example_knowledge_csv, file_name="品名對照表範例格式.csv", mime="text/csv")
+        
+        with col2:
+            test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
+            with st.expander("待翻譯品名 範例格式"):
+                example_test_data = pd.read_csv("翻譯品名範例格式.csv")
+                ui.table(example_test_data)
+                example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
+    
+        if knowledge_file and test_file:
+            knowledge_data = load_data(knowledge_file)
+            if isinstance(knowledge_data, dict):
+                knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
+            
+            test_data = load_data(test_file)
+            
+            if isinstance(test_data, dict):
+                test_data = test_data[list(test_data.keys())[0]]
+                
+            if not isinstance(test_data, pd.DataFrame):
+                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
+                return
+            
+            translated_data = []
+            
+            column_names = test_data.columns.to_list()
+            
+            for index, row in test_data.iterrows():
+                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
+                product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
+                translated_data.append(product_translations)
+            
+            translated_df = pd.DataFrame(translated_data)
+            
+            st.divider()
+            st.write("翻譯結果")
+            with st.container(height=400, border=None):
+                ui.table(translated_df)
+                
+            csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
+            csv_data = csv.encode('utf-8-sig')
+
+            trigger_download(csv_data, '翻譯結果.csv', 'csv')
+            
+    def organize_text_with_gpt(text, api_key):
+        client = OpenAI(api_key=api_key)
+        prompt = f"'''{text} '''{st.session_state.user_input}"
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+        )
+        
+        encoding = tiktoken.encoding_for_model("gpt-4")
+        input_tokens = len(encoding.encode(prompt))
+        output_tokens = len(encoding.encode(response.choices[0].message.content))
+        
+        st.session_state.total_input_tokens += input_tokens
+        st.session_state.total_output_tokens += output_tokens
+        
+        return response.choices[0].message.content
+    
+    def check_required_fields():
+        missing_fields = []
+        if not pdf_file:
+            missing_fields.append("PDF")
+        if not data_file:
+            missing_fields.append("CSV 或 XLSX")
+        if not json_file:
+            missing_fields.append("Google Cloud 憑證")
+        if not api_key:
+            missing_fields.append("OpenAI API Key")
+        if not st.session_state.user_input:
+            missing_fields.append("給 ChatGPT 的 Prompt")
+        if options == "每頁商品數固定" and not st.session_state.height:
+            missing_fields.append("指定截圖高度")
+        if options == "每頁商品數不固定":
+            if not st.session_state.symbol:
+                missing_fields.append("用來判斷截圖高度的符號或文字")
+            if not st.session_state.height_map:
+                missing_fields.append("對應的截圖高度")
+        return missing_fields
+    
+    missing_fields = check_required_fields()
+    if selected != "品名翻譯":
         with stylable_container(
                 key="run_btn",
                 css_styles="""
@@ -490,102 +607,6 @@ def main():
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
 
-    elif selected == "品名翻譯":
-        st.markdown('<div class="centered"><h2>品名翻譯工具</h2></div>', unsafe_allow_html=True)
-        st.write("\n")
-        st.write("\n")
-        def translate_product_name(product_name, knowledge_data):
-            translations = {}
-            lines = product_name.split('\n')
-            for line in lines:
-                if '：' in line:
-                    type_name, eng_name = line.split('：', 1)
-                    matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
-                    if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[0]['中文名稱']
-                    else:
-                        translations[type_name] = eng_name.strip()
-                else:
-                    translations[line] = line
-            return translations
-        
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
-
-        col1,col2 = st.columns(2)
-        with col1:
-            knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
-            with st.expander("品名對照表 範例格式"):
-                example_knowledge_data = pd.read_csv("品名對照表範例格式.csv")
-                ui.table(example_knowledge_data)
-                example_knowledge_csv = example_knowledge_data.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(label="下載範例檔案", data=example_knowledge_csv, file_name="品名對照表範例格式.csv", mime="text/csv")
-        
-        with col2:
-            test_file = st.file_uploader("上傳需要翻譯的檔案 CSV/XLSX", type=["xlsx", "csv"])
-            with st.expander("待翻譯品名 範例格式"):
-                example_test_data = pd.read_csv("翻譯品名範例格式.csv")
-                ui.table(example_test_data)
-                example_test_csv = example_test_data.to_csv(index=False).encode('utf-8-sig')
-                st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
-    
-        if knowledge_file and test_file:
-            knowledge_data = load_data(knowledge_file)
-            if isinstance(knowledge_data, dict):
-                knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
-            
-            test_data = load_data(test_file)
-            
-            if isinstance(test_data, dict):
-                test_data = test_data[list(test_data.keys())[0]]
-                
-            if not isinstance(test_data, pd.DataFrame):
-                st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
-                return
-            
-            translated_data = []
-            
-            column_names = test_data.columns.to_list()
-            
-            for index, row in test_data.iterrows():
-                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
-                product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
-                translated_data.append(product_translations)
-            
-            translated_df = pd.DataFrame(translated_data)
-            
-            st.divider()
-            st.write("翻譯結果")
-            with st.container(height=400, border=None):
-                ui.table(translated_df)
-                
-            csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
-            csv_data = csv.encode('utf-8-sig')
-
-            trigger_download(csv_data, '翻譯結果.csv', 'csv')
-            
-    def organize_text_with_gpt(text, api_key):
-        client = OpenAI(api_key=api_key)
-        prompt = f"'''{text} '''{st.session_state.user_input}"
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-        )
-        
-        encoding = tiktoken.encoding_for_model("gpt-4")
-        input_tokens = len(encoding.encode(prompt))
-        output_tokens = len(encoding.encode(response.choices[0].message.content))
-        
-        st.session_state.total_input_tokens += input_tokens
-        st.session_state.total_output_tokens += output_tokens
-        
-        return response.choices[0].message.content
-    
     if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
