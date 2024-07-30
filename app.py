@@ -505,7 +505,7 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                st.session_state.download_triggered = False
+                
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
