@@ -158,6 +158,8 @@ if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
     st.session_state.total_output_tokens = 0
+if 'download_clicked' not in st.session_state:
+    st.session_state.download_clicked = False
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -491,6 +493,7 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
+                st.session_state.download_clicked = False
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
@@ -590,7 +593,9 @@ def main():
                 def usd_to_twd(usd_amount):
                     result = convert(base='USD', amount=usd_amount, to=['TWD'])
                     return result['TWD']
-            
+                def mark_download():
+                    st.session_state.download_clicked = True
+                    
                 input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
                 output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
                 total_cost_usd = input_cost + output_cost
@@ -613,8 +618,9 @@ def main():
                     label="下載 ZIP 檔案",
                     data= st.session_state.zip_buffer,
                     file_name="output.zip",
-                    mime="application/zip"
+                    mime="application/zip",
+                    on_click=mark_download
                 )
-
+                
 if __name__ == "__main__":
     main()
