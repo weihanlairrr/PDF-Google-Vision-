@@ -363,7 +363,7 @@ def main():
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_json_path
 
     if selected == "PDF截圖與AI文案生成":
-        options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數不固定, key="tabs")
+        options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數固定", key="tabs")
         if options == "每頁商品數固定":
             st.markdown('<div class="centered"><h2>商運  PDF截圖與AI文案生成工具</h2></div>', unsafe_allow_html=True)
             st.write("\n")
