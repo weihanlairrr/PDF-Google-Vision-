@@ -609,12 +609,12 @@ def main():
                 st.write("##### 成果預覽")
                 ui.table(st.session_state.df_text)
                 
-        st.download_button(
-                label="下載 ZIP 檔案",
-                data= st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip"
-            )
+    st.download_button(
+            label="下載 ZIP 檔案",
+            data= st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+    )
 
 if __name__ == "__main__":
     main()
