@@ -630,6 +630,7 @@ def main():
                     )
         if 下載zip:
             placeholder.empty()
+            break
         
 if __name__ == "__main__":
     main()
