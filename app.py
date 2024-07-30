@@ -269,7 +269,13 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-    
+
+def reset_task_state():
+    st.session_state.task_completed = False
+    st.session_state.download_triggered = False
+    st.session_state.zip_file_ready = False
+    st.session_state.show_download_button = False
+
 def main():
     create_directories() 
     
