@@ -611,7 +611,7 @@ def main():
         
         st.download_button(
             label="下載 ZIP 檔案",
-            data=st.session_state.zip_buffer,
+            data= zip_buffer,
             file_name="output.zip",
             mime="application/zip"
         )
