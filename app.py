@@ -619,7 +619,7 @@ def main():
                 mime="application/zip"
             )
         elif options == "每頁商品數不固定":
-            col1, col2, col3 = st.tabs(3)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
             with col2:
