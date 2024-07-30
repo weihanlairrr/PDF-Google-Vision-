@@ -440,8 +440,8 @@ def main():
         input_tokens = len(encoding.encode(prompt))
         output_tokens = len(encoding.encode(response.choices[0].message.content))
         
-        st.session_state.total_input_tokens += input_tokens
-        st.session_state.total_output_tokens += output_tokens
+        total_input_tokens += input_tokens
+        total_output_tokens += output_tokens
         
         return response.choices[0].message.content
     
@@ -490,8 +490,8 @@ def main():
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
                 st.write('\n')
-                st.session_state.total_input_tokens = 0
-                st.session_state.total_output_tokens = 0
+                total_input_tokens = 0
+                total_output_tokens = 0
                 st.session_state.task_completed = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
@@ -587,17 +587,17 @@ def main():
                 result = convert(base='USD', amount=usd_amount, to=['TWD'])
                 return result['TWD']
             
-            input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
-            output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
+            input_cost = total_input_tokens / 1_000_000 * 0.15
+            output_cost = total_output_tokens / 1_000_000 * 0.60
             total_cost_usd = input_cost + output_cost
             total_cost_twd = usd_to_twd(total_cost_usd)
         
             st.divider()
             col1, col2, col3 = st.columns(3)
             with col1:
-                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
+                ui.metric_card(title="Input Tokens", content=f"{total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
             with col2:
-                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
+                ui.metric_card(title="Output Tokens", content=f"{total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
             with col3:
                 ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
             
