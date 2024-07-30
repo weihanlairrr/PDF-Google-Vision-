@@ -19,7 +19,145 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
-# 省略其餘未更動的部分...
+with st.sidebar:
+    st.markdown(
+        """
+        <style>
+        .stButton > button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%);      
+        }
+        .stDownloadButton button {
+            background-color: #46474A !important;
+            color: #f5f5f5 !important;
+            border: none;
+        }
+        .stDownloadButton button:hover {
+            background: linear-gradient(135deg, #707070 0%, #707070 100%) !important;
+        }
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+        [data-testid='stFileUploader'] section button {
+            background: transparent !important;
+            color: #46474A !important;
+            border-radius: 5px;
+            border: none;
+            display: block;
+            margin: 0 auto;
+        }
+        [data-testid='stFileUploader'] section {
+            background: #ECECEC!important;
+            color: black !important;
+            padding: 0;
+        ;
+        }
+        [data-testid='stFileUploader'] section > input + div {
+            display: none;
+        }
+        [data-testid=stSidebar] {
+            background: #F9F9F9;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+def create_directories():
+    os.makedirs("static", exist_ok=True)
+    os.makedirs("temp", exist_ok=True)
+
+def clear_directory(directory):
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+    os.makedirs(directory, exist_ok=True)
+
+def search_pdf(file, text):
+    doc = fitz.open(file)
+    res = []
+    for i, page in enumerate(doc):
+        insts = page.search_for(text)
+        for inst in insts:
+            res.append((i + 1, inst))
+    return res
+
+def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
+    doc = fitz.open(file)
+    page = doc.load_page(page_num - 1)
+    mat = fitz.Matrix(z, z)
+    pw = page.rect.width
+    clip = fitz.Rect(0, rect.y0 + offset, pw, rect.y0 + offset + h)
+    pix = page.get_pixmap(matrix=mat, clip=clip)
+    img_path = os.path.join(out_dir, f"page_{page_num}.png")
+    pix.save(img_path)
+    return img_path
+
+def rename_img(old_p, new_name):
+    new_p = os.path.join(os.path.dirname(old_p), new_name)
+    os.rename(old_p, new_p)
+    return new_p
+
+def search_extract_img(file, text, out_dir, h, offset=0):
+    res = search_pdf(file, text)
+    if res:
+        page_num, rect = res[0]
+        img_p = extract_img(file, page_num, rect, out_dir, h=h, offset=offset)
+        new_img_p = rename_img(img_p, f"{text}.png")
+        return page_num, new_img_p
+    return None, None
+
+def format_text(text):
+    lines = text.split('\n\n')
+    formatted_lines = [line.strip() for line in lines if line.strip()]
+    return '\n'.join(formatted_lines)
+
+def extract_text_from_image(img_path):
+    client = vision.ImageAnnotatorClient()
+    with io.open(img_path, 'rb') as image_file:
+        content = image_file.read()
+    image = vision.Image(content=content)
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+    if texts:
+        return texts[0].description
+    return ""
+
+# 初始化 session state 變數
+if 'zip_buffer' not in st.session_state:
+    st.session_state.zip_buffer = None
+if 'zip_file_ready' not in st.session_state:
+    st.session_state.zip_file_ready = False
+if 'df_text' not in st.session_state:
+    st.session_state.df_text = pd.DataFrame()
+if 'pdf_file' not in st.session_state:
+    st.session_state.pdf_file = None
+if 'data_file' not in st.session_state:
+    st.session_state.data_file = None
+if 'json_file' not in st.session_state:
+    st.session_state.json_file = None
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = ""
+if 'height' not in st.session_state:
+    st.session_state.height = ""
+if 'symbol' not in st.session_state:
+    st.session_state.symbol = ""
+if 'height_map_str' not in st.session_state:
+    st.session_state.height_map_str = ""
+if 'height_map' not in st.session_state:
+    st.session_state.height_map = {}
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+if 'task_completed' not in st.session_state:
+    st.session_state.task_completed = False
+if 'download_triggered' not in st.session_state:
+    st.session_state.download_triggered = False
+if 'total_input_tokens' not in st.session_state:
+    st.session_state.total_input_tokens = 0
+if 'total_output_tokens' not in st.session_state:
+    st.session_state.total_output_tokens = 0
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -99,6 +237,7 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
     progress_bar.empty()
     progress_text.empty()
 
+
 def update_api_key():
     if st.session_state['api_key'] != st.session_state['api_key_input']:
         st.session_state['api_key'] = st.session_state['api_key_input']
@@ -128,7 +267,7 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-
+    
 def main():
     create_directories() 
     
@@ -470,15 +609,12 @@ def main():
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
         
-        download_placeholder = st.empty()  # Create a placeholder for the download button
-        with download_placeholder:
-            st.download_button(
-                label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip"
-            )
-        st.session_state.download_triggered = True
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
 
 if __name__ == "__main__":
     main()
