@@ -427,6 +427,7 @@ def main():
                 file_name="翻譯結果.csv",
                 mime="text/csv"
             )
+            st.session_state.download_triggered = True
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
