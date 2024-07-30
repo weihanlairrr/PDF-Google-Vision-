@@ -486,7 +486,7 @@ def main():
                     """,
                 ):
             start_running = st.button("開始執行", key="run_btn")
-    
+
         if start_running:
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
@@ -533,16 +533,16 @@ def main():
                     elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
-    
+
                         for page in doc:
                             if page.search_for(st.session_state.symbol):
                                 symbol_found = True
                                 break
-    
+
                         if not symbol_found:
                             st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
                             return
-    
+
                         search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
     
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
@@ -585,7 +585,7 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-    
+
     if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
@@ -595,46 +595,26 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
+
         st.divider()
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
+        with col2:
+            ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
+        with col3:
+            ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
     
-        if options == "每頁商品數固定":
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-            with col2:
-                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-            with col3:
-                ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
-            
-            with st.container(height=400, border=None):
-                st.write("##### 成果預覽")
-                ui.table(st.session_state.df_text)
-            
-            st.download_button(
-                label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip"
-            )
-        elif options == "每頁商品數不固定":
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-            with col2:
-                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-            with col3:
-                ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
-            
-            with st.container(height=400, border=None):
-                st.write("##### 成果預覽")
-                ui.table(st.session_state.df_text)
-            
-            st.download_button(
-                label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip"
-            )
+        with st.container(height=400, border=None):
+            st.write("##### 成果預覽")
+            ui.table(st.session_state.df_text)
+        
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
 
 if __name__ == "__main__":
     main()
