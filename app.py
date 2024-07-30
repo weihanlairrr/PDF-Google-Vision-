@@ -595,7 +595,7 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
+
         st.divider()
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -608,7 +608,7 @@ def main():
         with st.container(height=400, border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-    
+        
         st.download_button(
             label="下載 ZIP 檔案",
             data=st.session_state.zip_buffer,
