@@ -380,9 +380,9 @@ def main():
             for line in lines:
                 if '：' in line:
                     type_name, eng_name = line.split('：', 1)
-                    matching_row = knowledge_data[(knowledge_data.iloc[:, 0] == type_name) & (knowledge_data.iloc[:, 1].str.lower() == eng_name.strip().lower())]
+                    matching_row = knowledge_data[(knowledge_data['品名類型'] == type_name) & (knowledge_data['EXCEL資料'].str.lower() == eng_name.strip().lower())]
                     if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[:, 2]
+                        translations[type_name] = matching_row.iloc[0]['中文名稱']
                     else:
                         translations[type_name] = eng_name.strip()
                 else:
