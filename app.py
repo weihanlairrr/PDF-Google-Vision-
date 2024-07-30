@@ -267,24 +267,6 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-
-def save_data_to_session_state(df_text, zip_buffer):
-    st.session_state.df_text = df_text
-    st.session_state.zip_buffer = zip_buffer
-
-def generate_zip_file(df_text):
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-        # 將 DataFrame 寫入 CSV
-        csv_buffer = io.StringIO()
-        df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')
-        csv_data = csv_buffer.getvalue().encode('utf-8-sig')
-        zipf.writestr("文字提取結果與文案.csv", csv_data)
-    zip_buffer.seek(0)
-    return zip_buffer.getvalue()
-    
-def get_data_from_session_state():
-    return st.session_state.df_text, st.session_state.zip_buffer
     
 def main():
     create_directories() 
@@ -603,13 +585,7 @@ def main():
                 st.session_state.zip_file_ready = True
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
-                
-        if st.session_state.task_completed and not st.session_state.zip_file_ready:
-            df_text = st.session_state.df_text
-            zip_data = generate_zip_file(df_text)
-            st.session_state.zip_buffer = zip_data
-            st.session_state.zip_file_ready = True
-            
+
         if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
             def usd_to_twd(usd_amount):
                 result = convert(base='USD', amount=usd_amount, to=['TWD'])
@@ -635,7 +611,7 @@ def main():
                 
             st.download_button(
                 label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
+                data= st.session_state.zip_buffer,
                 file_name="output.zip",
                 mime="application/zip"
             )
