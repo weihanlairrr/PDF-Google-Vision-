@@ -586,7 +586,7 @@ def main():
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
 
-    if st.session_state.task_completed and st.session_state.zip_file_ready:
+    if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
         def usd_to_twd(usd_amount):
             result = convert(base='USD', amount=usd_amount, to=['TWD'])
             return result['TWD']
@@ -595,7 +595,7 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
+
         st.divider()
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -608,17 +608,13 @@ def main():
         with st.container(height=400, border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-    
-        if st.session_state.zip_file_ready and not st.session_state.download_triggered:
-            download_button = st.download_button(
-                label="下載 ZIP 檔案",
-                data=st.session_state.zip_buffer,
-                file_name="output.zip",
-                mime="application/zip"
-            )
-    
-            if download_button:
-                st.session_state.download_triggered = True
+        
+        st.download_button(
+            label="下載 ZIP 檔案",
+            data=st.session_state.zip_buffer,
+            file_name="output.zip",
+            mime="application/zip"
+        )
 
 if __name__ == "__main__":
     main()
