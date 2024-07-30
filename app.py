@@ -267,10 +267,7 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-
-def update_download_triggered(value):
-    st.session_state.download_triggered = value
-
+    
 def main():
     create_directories() 
     
@@ -494,7 +491,6 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                update_download_triggered(False)
                 st.write('\n')
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
@@ -599,7 +595,7 @@ def main():
         output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
         total_cost_usd = input_cost + output_cost
         total_cost_twd = usd_to_twd(total_cost_usd)
-    
+
         st.divider()
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -612,16 +608,13 @@ def main():
         with st.container(height=400, border=None):
             st.write("##### 成果預覽")
             ui.table(st.session_state.df_text)
-    
+        
         st.download_button(
             label="下載 ZIP 檔案",
             data=st.session_state.zip_buffer,
             file_name="output.zip",
             mime="application/zip"
         )
-    
-        # 更新下載按鈕狀態
-        update_download_triggered(True)
 
 if __name__ == "__main__":
     main()
