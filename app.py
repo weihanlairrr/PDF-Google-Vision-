@@ -480,9 +480,9 @@ def main():
             missing_fields.append("OpenAI API Key")
         if not st.session_state.user_input:
             missing_fields.append("給 ChatGPT 的 Prompt")
-        if selected == "每頁商品數固定" and not st.session_state.height:
+        if options == "每頁商品數固定" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
-        if selected == "每頁商品數不固定":
+        if options == "每頁商品數不固定":
             if not st.session_state.symbol:
                 missing_fields.append("用來判斷截圖高度的符號或文字")
             if not st.session_state.height_map:
@@ -549,9 +549,9 @@ def main():
     
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                    if selected == "每頁商品數固定":
+                    if options == "每頁商品數固定":
                         search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
-                    elif selected == "每頁商品數不固定":
+                    elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
 
