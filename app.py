@@ -152,6 +152,8 @@ if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
+if 'download_triggered' not in st.session_state:
+    st.session_state.download_triggered = False
 if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
@@ -413,22 +415,23 @@ def main():
         
             st.divider()
             st.write("翻譯結果")
-            placeholder =st.empty
-            with placeholder.container():
-                with st.container(height=400, border=None):
-                    ui.table(translated_df)
-            
+            placeholder1 = st.empty()
+            placeholder2 = st.empty()
+            with placeholder1.container(height=400, border=None):
+                ui.table(translated_df)
+
+            with placeholder2.container():
                 csv = translated_df.to_csv(index=False, encoding='utf-8-sig')
                 csv_data = csv.encode('utf-8-sig')
-            
                 下載csv = st.download_button(
                     label="下載 CSV 檔案",
                     data=csv_data,
                     file_name="翻譯結果.csv",
                     mime="text/csv"
                 )
-            if 下載csv:
-                placeholder.empty()
+            if  下載csv:
+                placeholder1.empty()
+                placeholder2.empty()
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
@@ -498,6 +501,7 @@ def main():
                 st.session_state.total_output_tokens = 0
     
                 st.session_state.task_completed = False
+                st.session_state.download_triggered = False
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
                 st.session_state.df_text = pd.DataFrame()
@@ -587,37 +591,35 @@ def main():
                 st.session_state.df_text = df_text
                 st.session_state.task_completed = True
 
-            if st.session_state.task_completed and st.session_state.zip_file_ready:
-                def usd_to_twd(usd_amount):
-                    result = convert(base='USD', amount=usd_amount, to=['TWD'])
-                    return result['TWD']
-                
-                input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
-                output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
-                total_cost_usd = input_cost + output_cost
-                total_cost_twd = usd_to_twd(total_cost_usd)
+        if st.session_state.task_completed and st.session_state.zip_file_ready and not st.session_state.download_triggered:
+            def usd_to_twd(usd_amount):
+                result = convert(base='USD', amount=usd_amount, to=['TWD'])
+                return result['TWD']
             
-                st.divider()
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
-                with col2:
-                    ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
-                with col3:
-                    ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
-                
-                with st.container(height=400, border=None):
-                    st.write("##### 成果預覽")
-                    ui.table(st.session_state.df_text)
+            input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
+            output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
+            total_cost_usd = input_cost + output_cost
+            total_cost_twd = usd_to_twd(total_cost_usd)
+        
+            st.divider()
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
+            with col2:
+                ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
+            with col3:
+                ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
             
-                # 這裡放置下載按鈕，避免狀態更新
-                st.download_button(
-                    label="下載 ZIP 檔案",
-                    data=st.session_state.zip_buffer,
-                    file_name="output.zip",
-                    mime="application/zip"
-                )
-
+            with st.container(height=400, border=None):
+                st.write("##### 成果預覽")
+                ui.table(st.session_state.df_text)
+                
+            st.download_button(
+                label="下載 ZIP 檔案",
+                data= st.session_state.zip_buffer,
+                file_name="output.zip",
+                mime="application/zip"
+            )
 
 if __name__ == "__main__":
     main()
