@@ -492,6 +492,7 @@ def main():
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
                 st.write('\n')
+                st.session_state.task_completed = True
                 st.session_state.total_input_tokens = 0
                 st.session_state.total_output_tokens = 0
     
@@ -615,7 +616,7 @@ def main():
             file_name="output.zip",
             mime="application/zip"
         )
-        st.stop()
+        st.stop() 
 
 if __name__ == "__main__":
     main()
