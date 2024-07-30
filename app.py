@@ -603,7 +603,12 @@ def main():
                     output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
                     total_cost_usd = input_cost + output_cost
                     total_cost_twd = usd_to_twd(total_cost_usd)
-            
+                
+                    st.session_state.input_cost = input_cost
+                    st.session_state.output_cost = output_cost
+                    st.session_state.total_cost_twd = total_cost_twd
+
+                if st.session_state.get('task_completed') and st.session_state.get('zip_file_ready'):
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -611,18 +616,19 @@ def main():
                     with col2:
                         ui.metric_card(title="Output Tokens", content=f"{st.session_state.total_output_tokens} 個", description="US$0.60 / 每百萬個Tokens", key="card2")
                     with col3:
-                        ui.metric_card(title="本次執行費用", content=f"${total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
+                        ui.metric_card(title="本次執行費用", content=f"${st.session_state.total_cost_twd:.2f} NTD", description="根據即時匯率", key="card3")
                 
                     with st.container(height=400, border=None):
                         st.write("##### 成果預覽")
                         ui.table(st.session_state.df_text)
-                    
+                
                     st.download_button(
                         label="下載 ZIP 檔案",
                         data=st.session_state.zip_buffer,
                         file_name="output.zip",
                         mime="application/zip"
                     )
+
 
 if __name__ == "__main__":
     main()
