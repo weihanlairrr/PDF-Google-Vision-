@@ -51,9 +51,8 @@ with st.sidebar:
         }
         [data-testid='stFileUploader'] section {
             background: #ECECEC!important;
-            color: black !important;
+            color: black !重要;
             padding: 0;
-        ;
         }
         [data-testid='stFileUploader'] section > input + div {
             display: none;
@@ -84,12 +83,15 @@ def search_pdf(file, text):
             res.append((i + 1, inst))
     return res
 
-def extract_img(file, page_num, rect, out_dir, h, z=6.0, offset=0):
+def extract_img(file, page_num, rect, out_dir, h, w=None, z=6.0, offset=0):
     doc = fitz.open(file)
     page = doc.load_page(page_num - 1)
     mat = fitz.Matrix(z, z)
     pw = page.rect.width
-    clip = fitz.Rect(0, rect.y0 + offset, pw, rect.y0 + offset + h)
+    if w is None:
+        clip = fitz.Rect(0, rect.y0 + offset, pw, rect.y0 + offset + h)
+    else:
+        clip = fitz.Rect(max(0, rect.x0 - 20), rect.y0 + offset, min(pw, rect.x0 - 20 + w), rect.y0 + offset + h)
     pix = page.get_pixmap(matrix=mat, clip=clip)
     img_path = os.path.join(out_dir, f"page_{page_num}.png")
     pix.save(img_path)
@@ -100,11 +102,11 @@ def rename_img(old_p, new_name):
     os.rename(old_p, new_p)
     return new_p
 
-def search_extract_img(file, text, out_dir, h, offset=0):
+def search_extract_img(file, text, out_dir, h, w=None, offset=0):
     res = search_pdf(file, text)
     if res:
         page_num, rect = res[0]
-        img_p = extract_img(file, page_num, rect, out_dir, h=h, offset=offset)
+        img_p = extract_img(file, page_num, rect, out_dir, h=h, w=w, offset=offset)
         new_img_p = rename_img(img_p, f"{text}.png")
         return page_num, new_img_p
     return None, None
@@ -142,12 +144,18 @@ if 'api_key' not in st.session_state:
     st.session_state.api_key = ""
 if 'height' not in st.session_state:
     st.session_state.height = ""
+if 'width' not in st.session_state:
+    st.session_state.width = ""
 if 'symbol' not in st.session_state:
     st.session_state.symbol = ""
 if 'height_map_str' not in st.session_state:
     st.session_state.height_map_str = ""
 if 'height_map' not in st.session_state:
     st.session_state.height_map = {}
+if 'width_map_str' not in st.session_state:
+    st.session_state.width_map_str = ""
+if 'width_map' not in st.session_state:
+    st.session_state.width_map = {}
 if 'user_input' not in st.session_state:
     st.session_state.user_input = ""
 if 'task_completed' not in st.session_state:
@@ -183,14 +191,14 @@ async def process_texts(api_key, texts, prompt, batch_size=10):
                     formatted_text = format_text(organized_text)
                     yield {"貨號": text, "文案": formatted_text}
 
-def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
+def search_and_zip_case1(file, texts, h, w, out_dir, zipf, api_key, prompt):
     total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
 
     for i, text in enumerate(texts):
-        page_num, img_p = search_extract_img(file, text, out_dir, h=h)
+        page_num, img_p = search_extract_img(file, text, out_dir, h=h, w=w)
         if img_p:
             zipf.write(img_p, os.path.basename(img_p))
         progress = (i + 1) / total_files
@@ -199,7 +207,7 @@ def search_and_zip_case1(file, texts, h, out_dir, zipf, api_key, prompt):
     progress_bar.empty()
     progress_text.empty()
 
-def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
+def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zipf):
     total_files = len(texts)
     progress_bar = st.progress(0)
     progress_text = st.empty()
@@ -225,7 +233,8 @@ def search_and_zip_case2(file, texts, symbol, height_map, out_dir, zipf):
             page = doc.load_page(page_num - 1)
             symbol_count = len(page.search_for(symbol))
             height = height_map.get(symbol_count, 240)
-            img_p = extract_img(file, page_num, rect, out_dir, h=height, offset=-10)
+            width = width_map.get(symbol_count, None)
+            img_p = extract_img(file, page_num, rect, out_dir, h=height, w=width, offset=-10)
             new_img_p = rename_img(img_p, f"{text}.png")
             zipf.write(new_img_p, os.path.basename(new_img_p))
         progress = (i + 1) / total_files
@@ -243,6 +252,10 @@ def update_api_key():
 def update_height():
     if st.session_state['height'] != st.session_state['height_input']:
         st.session_state['height'] = st.session_state['height_input']
+
+def update_width():
+    if st.session_state['width'] != st.session_state['width_input']:
+        st.session_state['width'] = st.session_state['width_input']
 
 def update_user_input():
     if st.session_state['user_input'] != st.session_state['user_input_input']:
@@ -265,7 +278,21 @@ def update_height_map_str():
                 except ValueError:
                     st.session_state.height_map_errors.append(f"無效的高度對應輸入: {item}")
         st.session_state['height_map'] = height_map
-    
+
+def update_width_map_str():
+    st.session_state.width_map_errors = []  # 用於存放寬度對應的錯誤訊息
+    if st.session_state['width_map_str'] != st.session_state['width_map_str_input']:
+        st.session_state['width_map_str'] = st.session_state['width_map_str_input']
+        width_map = {}
+        for item in st.session_state['width_map_str'].split("\n"):
+            if ":" in item:
+                try:
+                    k, v = item.split(":")
+                    width_map[int(k.strip())] = int(v.strip())
+                except ValueError:
+                    st.session_state.width_map_errors.append(f"無效的寬度對應輸入: {item}")
+        st.session_state['width_map'] = width_map
+
 def main():
     create_directories() 
     
@@ -336,13 +363,16 @@ def main():
     if selected == "PDF截圖與AI文案":
         options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數固定", key="tabs")
         if options == "每頁商品數固定":
-            st.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            st.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
-        elif  options == "每頁商品數不固定":
-            st.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
-            col1, col2 = st.columns([1,1.9])
-            col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=250, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            col2.text_area("給 ChatGPT 的 Prompt", height=250, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+            col1 ,col2 = st.columns(2)
+            col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+            col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width)
+            st.text_area("給 ChatGPT 的 Prompt", height=286, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+        elif  options == "每頁商品數不固定":  
+            col1, col2 = st.columns([1,1.7])
+            col1.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
+            col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
+            col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬\n\n數量：寬度（用換行分隔）\n----------------------------------------\n2:300\n3:500", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="可選填")
+            col2.text_area("給 ChatGPT 的 Prompt", height=370, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
     
     elif selected == "品名翻譯":
         def translate_product_name(product_name, knowledge_data):
@@ -428,7 +458,7 @@ def main():
                     file_name="翻譯結果.csv",
                     mime="text/csv"
                 )
-            if  下載csv:
+            if 下載csv:
                 placeholder1.empty()
                 placeholder2.empty()
                 placeholder3.empty()
@@ -533,7 +563,7 @@ def main():
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                     if options == "每頁商品數固定":
-                        search_and_zip_case1(pdf_path, texts, int(st.session_state.height), output_dir, zipf, api_key, st.session_state.user_input)
+                        search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input)
                     elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
@@ -547,7 +577,7 @@ def main():
                             st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
                             return
 
-                        search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, output_dir, zipf)
+                        search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, st.session_state.width_map, output_dir, zipf)
     
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                     data = []
