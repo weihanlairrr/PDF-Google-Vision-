@@ -8,10 +8,8 @@ import io
 import aiohttp
 import asyncio
 import concurrent.futures
-import base64
 import tiktoken
 import streamlit_shadcn_ui as ui
-import streamlit.components.v1 as components
 
 from openai import OpenAI
 from google.cloud import vision
