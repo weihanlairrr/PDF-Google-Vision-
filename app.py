@@ -610,7 +610,7 @@ def main():
                 with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                     not_found = []
                     if options == "每頁商品數固定":
-                        not_found = search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input)
+                        not_found = search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input1)
                     elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
