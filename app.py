@@ -194,16 +194,22 @@ def search_and_zip_case1(file, texts, h, w, out_dir, zipf, api_key, prompt):
     progress_bar = st.progress(0)
     progress_text = st.empty()
     progress_text.text("準備載入PDF與CSV文件")
+    
+    not_found = []
 
     for i, text in enumerate(texts):
         page_num, img_p = search_extract_img(file, text, out_dir, h=h, w=w)
         if img_p:
             zipf.write(img_p, os.path.basename(img_p))
+        else:
+            not_found.append(text)
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
     progress_bar.empty()
     progress_text.empty()
+
+    return not_found
 
 def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zipf):
     total_files = len(texts)
@@ -213,6 +219,8 @@ def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zi
 
     doc = fitz.open(file)
     symbol_found = False
+    
+    not_found = []
     
     # 檢查整個文件是否包含 symbol
     for page in doc:
@@ -235,13 +243,16 @@ def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zi
             img_p = extract_img(file, page_num, rect, out_dir, h=height, w=width, offset=-10)
             new_img_p = rename_img(img_p, f"{text}.png")
             zipf.write(new_img_p, os.path.basename(new_img_p))
+        else:
+            not_found.append(text)
         progress = (i + 1) / total_files
         progress_bar.progress(progress)
         progress_text.text(f"正在擷取圖片: {text} ({i + 1}/{total_files})")
     
     progress_bar.empty()
     progress_text.empty()
-
+    
+    return not_found
 
 def update_api_key():
     if st.session_state['api_key'] != st.session_state['api_key_input']:
@@ -278,7 +289,7 @@ def update_height_map_str():
         st.session_state['height_map'] = height_map
 
 def update_width_map_str():
-    st.session_state.width_map_errors = []  # 用於存放寬度對應的錯誤訊息
+    st.session_state.width_map_errors = [] 
     if st.session_state['width_map_str'] != st.session_state['width_map_str_input']:
         st.session_state['width_map_str'] = st.session_state['width_map_str_input']
         width_map = {}
@@ -560,8 +571,9 @@ def main():
     
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+                    not_found = []
                     if options == "每頁商品數固定":
-                        search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input)
+                        not_found = search_and_zip_case1(pdf_path, texts, int(st.session_state.height), int(st.session_state.width) if st.session_state.width else None, output_dir, zipf, api_key, st.session_state.user_input)
                     elif options == "每頁商品數不固定":
                         doc = fitz.open(pdf_path)
                         symbol_found = False
@@ -575,7 +587,15 @@ def main():
                             st.warning(f"無法在PDF中找到 \"{st.session_state.symbol}\"")
                             return
 
-                        search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, st.session_state.width_map, output_dir, zipf)
+                        not_found = search_and_zip_case2(pdf_path, texts, st.session_state.symbol, st.session_state.height_map, st.session_state.width_map, output_dir, zipf)
+                    
+                    if not_found:
+                        df_not_found = pd.DataFrame(not_found, columns=["無法搜尋到的貨號"])
+                        csv_buffer_not_found = io.StringIO()
+                        df_not_found.to_csv(csv_buffer_not_found, index=False, encoding='utf-8-sig')
+                        csv_data_not_found = csv_buffer_not_found.getvalue().encode('utf-8-sig')
+                        zipf.writestr("無法搜尋到的貨號.csv", csv_data_not_found)
+                        st.warning("執行過程中有特定貨號不存在於PDF中，請參考ZIP檔中的錯誤說明檔。")
     
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                     data = []
