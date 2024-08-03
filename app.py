@@ -507,9 +507,9 @@ def main():
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
         if selected == "PDF截圖與AI文案" and options == "每頁商品數固定":
-            prompt = f"'''{text} '''{st.session_state.user_input1}\n\n＊不要使用markdown語法。\n\n＊依循以下格式產生文案，【】和〖〗都要使用：\n\n【指定的主題】\n\n〖標題〗\n1. 文案1 \n2. 文案2\n...... \n\n〖標題〗\n1. 文案1 \n2. 文案2 \n......"
+            prompt = f"'''{text} '''{st.session_state.user_input1}\n＊不要使用markdown語法。\n＊依循以下格式產生文案，【】和〖〗都要使用：\n\n【指定的主題】\n〖標題〗\n1. 文案1 \n2. 文案2\n...... \n\n〖標題〗\n1. 文案1 \n2. 文案2 \n......"
         elif selected == "PDF截圖與AI文案" and options == "每頁商品數不固定":
-            prompt = f"'''{text} '''{st.session_state.user_input2}\n\n＊不要使用markdown語法。\n\n＊依循以下格式產生文案，【】和〖〗都要使用：\n\n【指定的主題】\n\n〖標題〗\n1. 文案1 \n2. 文案2\n...... \n\n〖標題〗\n1. 文案1 \n2. 文案2 \n......"
+            prompt = f"'''{text} '''{st.session_state.user_input2}\n＊不要使用markdown語法。\n＊依循以下格式產生文案，【】和〖〗都要使用：\n\n【指定的主題】\n〖標題〗\n1. 文案1 \n2. 文案2\n...... \n\n〖標題〗\n1. 文案1 \n2. 文案2 \n......"
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
