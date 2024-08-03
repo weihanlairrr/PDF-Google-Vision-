@@ -679,7 +679,7 @@ def main():
 
                 if st.session_state.task_completed and st.session_state.zip_file_ready:
                     st.session_state.df_text = split_columns(st.session_state.df_text)
-            
+                    missing_items = [item for item in texts if item not in st.session_state.df_text['貨號'].unique()]
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
                         for img_file in os.listdir(output_dir):
@@ -690,6 +690,13 @@ def main():
                         st.session_state.df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
                         csv_data = csv_buffer.getvalue().encode('utf-8-sig')
                         zipf.writestr("文字提取結果與文案.csv", csv_data)
+            
+                        if missing_items:
+                            missing_df = pd.DataFrame(missing_items, columns=['無法搜尋到的貨號'])
+                            missing_csv_buffer = io.StringIO()
+                            missing_df.to_csv(missing_csv_buffer, index=False, encoding='utf-8-sig')
+                            missing_csv_data = missing_csv_buffer.getvalue().encode('utf-8-sig')
+                            zipf.writestr("無法搜尋到的貨號.csv", missing_csv_data)
             
                     st.session_state.zip_buffer = zip_buffer.getvalue()
             
@@ -721,6 +728,6 @@ def main():
                         file_name="output.zip",
                         mime="application/zip"
                     )
-
+                    
 if __name__ == "__main__":
     main()
