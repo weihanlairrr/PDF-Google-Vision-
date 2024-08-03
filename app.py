@@ -595,7 +595,7 @@ def main():
                         df_not_found.to_csv(csv_buffer_not_found, index=False, encoding='utf-8-sig')
                         csv_data_not_found = csv_buffer_not_found.getvalue().encode('utf-8-sig')
                         zipf.writestr("無法搜尋到的貨號.csv", csv_data_not_found)
-                        st.warning("執行過程中有特定貨號不存在於PDF中，請參考ZIP檔中的錯誤說明檔。")
+                        st.warning("有特定貨號不存在於PDF中，請參考ZIP檔中的錯誤說明檔。")
     
                     image_files = [f for f in os.listdir(output_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
                     data = []
