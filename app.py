@@ -538,7 +538,9 @@ def main():
             missing_fields.append("Google Cloud 憑證")
         if not api_key:
             missing_fields.append("OpenAI API Key")
-        if not st.session_state.user_input1 or st.session_state.user_input2:
+        if selected == "PDF截圖與AI文案" and options == "每頁商品數固定"  and not st.session_state.user_input1:
+            missing_fields.append("給 ChatGPT 的 Prompt")
+        if selected == "PDF截圖與AI文案" and options == "每頁商品數不固定"  and not st.session_state.user_input2:
             missing_fields.append("給 ChatGPT 的 Prompt")
         if selected == "PDF截圖與AI文案" and options == "每頁商品數固定" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
