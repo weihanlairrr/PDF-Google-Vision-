@@ -63,7 +63,45 @@ with st.sidebar:
         """,
         unsafe_allow_html=True
     )
-
+# 初始化 session state 變數
+if 'zip_buffer' not in st.session_state:
+    st.session_state.zip_buffer = None
+if 'zip_file_ready' not in st.session_state:
+    st.session_state.zip_file_ready = False
+if 'df_text' not in st.session_state:
+    st.session_state.df_text = pd.DataFrame()
+if 'pdf_file' not in st.session_state:
+    st.session_state.pdf_file = None
+if 'data_file' not in st.session_state:
+    st.session_state.data_file = None
+if 'json_file' not in st.session_state:
+    st.session_state.json_file = None
+if 'api_key' not in st.session_state:
+    st.session_state.api_key = ""
+if 'height' not in st.session_state:
+    st.session_state.height = ""
+if 'width' not in st.session_state:
+    st.session_state.width = ""
+if 'symbol' not in st.session_state:
+    st.session_state.symbol = ""
+if 'height_map_str' not in st.session_state:
+    st.session_state.height_map_str = ""
+if 'height_map' not in st.session_state:
+    st.session_state.height_map = {}
+if 'width_map_str' not in st.session_state:
+    st.session_state.width_map_str = ""
+if 'width_map' not in st.session_state:
+    st.session_state.width_map = {}
+if 'user_input1' not in st.session_state:
+    st.session_state.user_input1 = ""
+if 'user_input2' not in st.session_state:
+    st.session_state.user_input2 = "" 
+if 'task_completed' not in st.session_state:
+    st.session_state.task_completed = False
+if 'total_input_tokens' not in st.session_state:
+    st.session_state.total_input_tokens = 0
+if 'total_output_tokens' not in st.session_state:
+    st.session_state.total_output_tokens = 0
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
@@ -125,46 +163,6 @@ def extract_text_from_image(img_path):
     if texts:
         return texts[0].description
     return ""
-
-# 初始化 session state 變數
-if 'zip_buffer' not in st.session_state:
-    st.session_state.zip_buffer = None
-if 'zip_file_ready' not in st.session_state:
-    st.session_state.zip_file_ready = False
-if 'df_text' not in st.session_state:
-    st.session_state.df_text = pd.DataFrame()
-if 'pdf_file' not in st.session_state:
-    st.session_state.pdf_file = None
-if 'data_file' not in st.session_state:
-    st.session_state.data_file = None
-if 'json_file' not in st.session_state:
-    st.session_state.json_file = None
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ""
-if 'height' not in st.session_state:
-    st.session_state.height = ""
-if 'width' not in st.session_state:
-    st.session_state.width = ""
-if 'symbol' not in st.session_state:
-    st.session_state.symbol = ""
-if 'height_map_str' not in st.session_state:
-    st.session_state.height_map_str = ""
-if 'height_map' not in st.session_state:
-    st.session_state.height_map = {}
-if 'width_map_str' not in st.session_state:
-    st.session_state.width_map_str = ""
-if 'width_map' not in st.session_state:
-    st.session_state.width_map = {}
-if 'user_input1' not in st.session_state:
-    st.session_state.user_input1 = ""
-if 'user_input2' not in st.session_state:
-    st.session_state.user_input2 = "" 
-if 'task_completed' not in st.session_state:
-    st.session_state.task_completed = False
-if 'total_input_tokens' not in st.session_state:
-    st.session_state.total_input_tokens = 0
-if 'total_output_tokens' not in st.session_state:
-    st.session_state.total_output_tokens = 0
 
 async def fetch_gpt_response(session, api_key, text, prompt):
     url = "https://api.openai.com/v1/chat/completions"
@@ -472,14 +470,11 @@ def main():
             if not isinstance(test_data, pd.DataFrame):
                 st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
                 return
-        
-            translated_data = []
-        
+            translated_data = [] 
             column_names = test_data.columns.to_list()
-        
             for index, row in test_data.iterrows():
-                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  # assuming second column is the product name
-                product_translations = {column_names[0]: row[column_names[0]], **product_translations}  # keep the first column at the first position
+                product_translations = translate_product_name(row[column_names[1]], knowledge_data)  
+                product_translations = {column_names[0]: row[column_names[0]], **product_translations} 
                 translated_data.append(product_translations)
         
             translated_df = pd.DataFrame(translated_data)
