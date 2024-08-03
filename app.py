@@ -279,7 +279,7 @@ def update_symbol():
         st.session_state['symbol'] = st.session_state['symbol_input']
 
 def update_height_map_str():
-    st.session_state.height_map_errors = []  # 用於存放高度對應的錯誤訊息
+    st.session_state.height_map_errors = []  
     if st.session_state['height_map_str'] != st.session_state['height_map_str_input']:
         st.session_state['height_map_str'] = st.session_state['height_map_str_input']
         height_map = {}
@@ -410,13 +410,13 @@ def main():
             col1 ,col2 = st.columns(2)
             col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width,help="選填")
-            st.text_area("給 ChatGPT 的 Prompt", placeholder="程式中已預設文案生成的格式，prompt中無須再指定",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
+            st.text_area("給 ChatGPT 的 Prompt", placeholder="prompt中無須指定文案格式，生成的內容將自動於表格中分割為多個欄位",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
         elif  options == "每頁商品數不固定":  
             col1, col2 = st.columns([1,1.7])
             col1.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬\n\n數量：寬度（用換行分隔）\n----------------------------------------\n2:300\n3:500", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="選填")
-            col2.text_area("給 ChatGPT 的 Prompt", placeholder="・程式中已預設文案生成的格式，prompt中無須再指定",height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
+            col2.text_area("給 ChatGPT 的 Prompt", placeholder="・prompt中無須指定文案格式，生成的內容將自動於表格中分割為多個欄位",height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
     
     elif selected == "品名翻譯":
         def translate_product_name(product_name, knowledge_data):
