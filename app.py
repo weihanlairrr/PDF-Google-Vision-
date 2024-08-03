@@ -331,6 +331,10 @@ def split_columns(df):
     for idx, row in df.iterrows():
         split_data.extend(split_content(row))
 
+    if not split_data:
+        st.error("沒有可分割的數據")
+        return pd.DataFrame()
+
     columns = ['貨號', '圖片內容', '主題', '標題'] + [f'文案{i}' for i in range(1, max(len(row) for row in split_data) - 3)]
 
     result_df = pd.DataFrame(split_data, columns=columns)
