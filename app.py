@@ -5,6 +5,7 @@ import shutil
 import zipfile
 import pandas as pd
 import io
+import re
 import aiohttp
 import asyncio
 import concurrent.futures
@@ -154,8 +155,10 @@ if 'width_map_str' not in st.session_state:
     st.session_state.width_map_str = ""
 if 'width_map' not in st.session_state:
     st.session_state.width_map = {}
-if 'user_input' not in st.session_state:
-    st.session_state.user_input = ""
+if 'user_input1' not in st.session_state:
+    st.session_state.user_input1 = ""
+if 'user_input2' not in st.session_state:
+    st.session_state.user_input2 = "" 
 if 'task_completed' not in st.session_state:
     st.session_state.task_completed = False
 if 'total_input_tokens' not in st.session_state:
@@ -221,8 +224,7 @@ def search_and_zip_case2(file, texts, symbol, height_map, width_map, out_dir, zi
     symbol_found = False
     
     not_found = []
-    
-    # 檢查整個文件是否包含 symbol
+
     for page in doc:
         if page.search_for(symbol):
             symbol_found = True
@@ -266,10 +268,14 @@ def update_width():
     if st.session_state['width'] != st.session_state['width_input']:
         st.session_state['width'] = st.session_state['width_input']
 
-def update_user_input():
-    if st.session_state['user_input'] != st.session_state['user_input_input']:
-        st.session_state['user_input'] = st.session_state['user_input_input']
+def update_user_input1():
+    if st.session_state['user_input1'] != st.session_state['user_input_input1']:
+        st.session_state['user_input1'] = st.session_state['user_input_input1']
 
+def update_user_input2():
+    if st.session_state['user_input2'] != st.session_state['user_input_input2']:
+        st.session_state['user_input2'] = st.session_state['user_input_input2']
+        
 def update_symbol():
     if st.session_state['symbol'] != st.session_state['symbol_input']:
         st.session_state['symbol'] = st.session_state['symbol_input']
@@ -301,6 +307,37 @@ def update_width_map_str():
                 except ValueError:
                     st.session_state.width_map_errors.append(f"無效的寬度對應輸入: {item}")
         st.session_state['width_map'] = width_map
+
+def split_content(row):
+    content = row['文案']
+    themes = re.split(r'【([^】]+)】', content)
+    result = []
+    
+    for i in range(1, len(themes), 2):
+        theme = themes[i]
+        titles = re.split(r'〖([^〗]+)〗', themes[i+1])
+        for j in range(1, len(titles), 2):
+            title = titles[j]
+            texts = re.split(r'\d\.\s', titles[j+1])
+            texts = [text.strip() for text in texts if text.strip()]
+            row_result = [row['貨號'], row['圖片內容'], theme, title] + texts
+            result.append(row_result)
+    
+    return result
+
+def split_columns(df):
+    split_data = []
+
+    for idx, row in df.iterrows():
+        split_data.extend(split_content(row))
+
+    columns = ['貨號', '圖片內容', '主題', '標題'] + [f'文案{i}' for i in range(1, max(len(row) for row in split_data) - 3)]
+
+    result_df = pd.DataFrame(split_data, columns=columns)
+    
+    result_df['圖片內容'] = result_df['圖片內容'].mask(result_df['圖片內容'].duplicated(), '')
+
+    return result_df
 
 def main():
     create_directories() 
@@ -374,14 +411,14 @@ def main():
         if options == "每頁商品數固定":
             col1 ,col2 = st.columns(2)
             col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width)
-            st.text_area("給 ChatGPT 的 Prompt", height=286, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+            col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width,help="選填")
+            st.text_area("給 ChatGPT 的 Prompt", placeholder="程式中已預設文案生成的格式，prompt中無須再指定",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
         elif  options == "每頁商品數不固定":  
             col1, col2 = st.columns([1,1.7])
             col1.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
-            col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬\n\n數量：寬度（用換行分隔）\n----------------------------------------\n2:300\n3:500", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="可選填")
-            col2.text_area("給 ChatGPT 的 Prompt", height=370, value=st.session_state.user_input, key='user_input_input', on_change=update_user_input)
+            col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬\n\n數量：寬度（用換行分隔）\n----------------------------------------\n2:300\n3:500", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="選填")
+            col2.text_area("給 ChatGPT 的 Prompt", placeholder="程式中已預設文案生成的格式，prompt中無須再指定",height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
     
     elif selected == "品名翻譯":
         def translate_product_name(product_name, knowledge_data):
@@ -474,7 +511,7 @@ def main():
                 
     def organize_text_with_gpt(text, api_key):
         client = OpenAI(api_key=api_key)
-        prompt = f"'''{text} '''{st.session_state.user_input}"
+        prompt = f"'''{text} '''{st.session_state.user_input}\n\n＊不要使用markdown語法。\n\n＊依循以下格式產生文案，【】和〖〗都要使用：\n\n【指定的主題】\n\n〖標題〗\n1. 文案1 \n2. 文案2\n...... \n\n〖標題〗\n1. 文案1 \n2. 文案2 \n......"
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -501,7 +538,7 @@ def main():
             missing_fields.append("Google Cloud 憑證")
         if not api_key:
             missing_fields.append("OpenAI API Key")
-        if not st.session_state.user_input:
+        if not st.session_state.user_input1 or st.session_state.user_input2:
             missing_fields.append("給 ChatGPT 的 Prompt")
         if selected == "PDF截圖與AI文案" and options == "每頁商品數固定" and not st.session_state.height:
             missing_fields.append("指定截圖高度")
@@ -639,15 +676,30 @@ def main():
                 st.session_state.task_completed = True
 
                 if st.session_state.task_completed and st.session_state.zip_file_ready:
+                    st.session_state.df_text = split_columns(st.session_state.df_text)
+            
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+                        for img_file in os.listdir(output_dir):
+                            img_path = os.path.join(output_dir, img_file)
+                            zipf.write(img_path, os.path.basename(img_path))
+                            
+                        csv_buffer = io.StringIO()
+                        st.session_state.df_text.to_csv(csv_buffer, index=False, encoding='utf-8-sig')  
+                        csv_data = csv_buffer.getvalue().encode('utf-8-sig')
+                        zipf.writestr("文字提取結果與文案.csv", csv_data)
+            
+                    st.session_state.zip_buffer = zip_buffer.getvalue()
+            
                     def usd_to_twd(usd_amount):
                         result = convert(base='USD', amount=usd_amount, to=['TWD'])
                         return result['TWD']
-                
+            
                     input_cost = st.session_state.total_input_tokens / 1_000_000 * 0.15
                     output_cost = st.session_state.total_output_tokens / 1_000_000 * 0.60
                     total_cost_usd = input_cost + output_cost
                     total_cost_twd = usd_to_twd(total_cost_usd)
-            
+                
                     st.divider()
                     col1, col2, col3 = st.columns(3)
                     with col1:
