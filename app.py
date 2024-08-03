@@ -18,6 +18,8 @@ from py_currency_converter import convert
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_option_menu import option_menu
 
+st.set_page_config(page_title=None, page_icon=None, layout="wide")
+
 with st.sidebar:
     st.markdown(
         """
