@@ -739,7 +739,7 @@ def main():
                         st.write("##### 成果預覽")
                         ui.table(st.session_state.df_text)
                     if st.session_state.split_error:
-                        st.warning("文案的生成格式不合要求，無法自動分割欄位，已採用不分割欄位的作法。")
+                        st.warning("您勾選了自動將文案分割欄位，但由於文案的生成格式不合要求，已改採不分割欄位的作法。")
                     st.download_button(
                         label="下載 ZIP 檔案",
                         data=st.session_state.zip_buffer,
