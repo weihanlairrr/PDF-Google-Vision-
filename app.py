@@ -434,7 +434,7 @@ def main():
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n\n2.上傳Photoshop，查看左側的圖片高度")
             col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬，寫法同截圖高度", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="選填")
             col2.text_area("給 ChatGPT 的 Prompt", height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
-            st.checkbox("自動將文案分割為不同欄位", value=st.session_state.split_content2, key='split_content2_checkbox', on_change=update_split_content2, help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄位，但同時prompt中就必須要求使用特定的文案格式\n\n【指定的主題】\n\n〖標題〗\n\n1.文案1\n\n2.文案2\n\n3. ......")
+            st.checkbox("自動將文案分割為不同欄位", value=st.session_state.split_content2, key='split_content2_checkbox', on_change=update_split_content2, help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄位，但同時prompt中就必須要求使用特定的文案格式\n\n【指定的主題】\n\n〖標題〗\n\n1.文案1\n\n2.文案2\n3. ......")
     elif selected == "品名翻譯":
         def translate_product_name(product_name, knowledge_data):
             translations = {}
