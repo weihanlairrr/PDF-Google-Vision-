@@ -353,6 +353,39 @@ def split_columns(df):
 
     return result_df
 
+def validate_openai_api_key(api_key):
+    try:
+        client = OpenAI(api_key=api_key)
+        client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "user", "content": "Test message"}
+            ],
+        )
+    except Exception as e:
+        error_message = str(e)
+        if "Incorrect API key provided" in error_message:
+            return "OpenAI API Key 驗證失敗：輸入錯誤"
+        elif "insufficient_quota" in error_message:
+            return "OpenAI API Key 驗證失敗：餘額不足"
+        else:
+            return "OpenAI API Key 驗證失敗：{}".format(e)
+    return None
+
+def validate_google_cloud_vision_credentials():
+    try:
+        client = vision.ImageAnnotatorClient()
+        client.batch_annotate_images(requests=[])
+    except Exception as e:
+        error_message = str(e)
+        if "unavailable" in error_message:
+            return "Google Cloud Vision 憑證驗證失敗：服務不可用，請稍後再試。"
+        elif "invalid" in error_message:
+            return "Google Cloud Vision 憑證驗證失敗：憑證無效或過期。"
+        else:
+            return "Google Cloud Vision 憑證驗證失敗：{}".format(e)
+    return None
+
 def main():
     create_directories() 
     
@@ -589,9 +622,19 @@ def main():
             if missing_fields:
                 st.warning("請上傳或輸入以下必需的項目：{}".format("、".join(missing_fields)))
             else:
-                st.write('\n')
-                st.session_state.total_input_tokens = 0
-                st.session_state.total_output_tokens = 0
+                error_messages = []
+    
+                openai_error = validate_openai_api_key(api_key)
+                if openai_error:
+                    error_messages.append(openai_error)
+                
+                google_error = validate_google_cloud_vision_credentials()
+                if google_error:
+                    error_messages.append(google_error)
+                
+                if error_messages:
+                    st.error("\n{}".format("\n\n".join(error_messages)))
+                    return
     
                 st.session_state.task_completed = False
                 st.session_state.zip_buffer = None
@@ -697,7 +740,7 @@ def main():
                     try:
                         if (options == "每頁商品數固定" and st.session_state.split_content1) or (options == "每頁商品數不固定" and st.session_state.split_content2):
                             st.session_state.df_text = split_columns(st.session_state.df_text)
-                    except Exception as e:
+                    except Exception:
                         st.session_state.split_error = True
                         st.session_state.df_text = df_text
                     
