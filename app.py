@@ -109,6 +109,8 @@ if 'split_content1' not in st.session_state:
     st.session_state.split_content1 = True
 if 'split_content2' not in st.session_state:
     st.session_state.split_content2 = True
+if 'split_error' not in st.session_state:
+    st.session_state.split_error = False
 
 def create_directories():
     os.makedirs("static", exist_ok=True)
@@ -416,7 +418,7 @@ def main():
         options = ui.tabs(options=[ "每頁商品數固定","每頁商品數不固定"], default_value= "每頁商品數固定", key="tabs")
         if options == "每頁商品數固定":
             col1 ,col2 = st.columns(2)
-            col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n\n 2.上傳Photoshop，查看左側的圖片高度")
+            col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width,help="選填")
             st.text_area("給 ChatGPT 的 Prompt",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
             st.checkbox("自動將文案分割欄位", value=st.session_state.split_content1, key='split_content1', help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄位，但同時prompt中就必須要求使用特定的文案格式\n\n【指定的主題】\n\n〖標題〗\n\n1.文案1\n\n2.文案2\n\n3. ......")
@@ -686,8 +688,12 @@ def main():
                 st.session_state.task_completed = True
 
                 if st.session_state.task_completed and st.session_state.zip_file_ready:
-                    if (options == "每頁商品數固定" and st.session_state.split_content1) or (options == "每頁商品數不固定" and st.session_state.split_content2):
-                        st.session_state.df_text = split_columns(st.session_state.df_text)
+                    try:
+                        if (options == "每頁商品數固定" and st.session_state.split_content1) or (options == "每頁商品數不固定" and st.session_state.split_content2):
+                            st.session_state.df_text = split_columns(st.session_state.df_text)
+                    except Exception as e:
+                        st.session_state.split_error = True
+                        st.session_state.df_text = df_text
                     
                     missing_items = [item for item in texts if item not in st.session_state.df_text['貨號'].unique()]
                     zip_buffer = io.BytesIO()
@@ -739,5 +745,8 @@ def main():
                         mime="application/zip"
                     )
                     
+                    if st.session_state.split_error:
+                        st.warning("文案的生成格式不合要求，無法自動分割欄位，已採用不分割欄位的作法。")
+
 if __name__ == "__main__":
     main()
