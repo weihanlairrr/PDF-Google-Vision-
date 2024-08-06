@@ -727,8 +727,6 @@ def main():
                     total_cost_twd = usd_to_twd(total_cost_usd)
                 
                     st.divider()
-                    if st.session_state.split_error:
-                        st.warning("文案的生成格式不合要求，無法自動分割欄位，已採用不分割欄位的作法。")
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         ui.metric_card(title="Input Tokens", content=f"{st.session_state.total_input_tokens} 個", description="US$0.15 / 每百萬個Tokens", key="card1")
@@ -740,7 +738,8 @@ def main():
                     with st.container(height=400, border=None):
                         st.write("##### 成果預覽")
                         ui.table(st.session_state.df_text)
-                    
+                    if st.session_state.split_error:
+                        st.warning("文案的生成格式不合要求，無法自動分割欄位，已採用不分割欄位的作法。")
                     st.download_button(
                         label="下載 ZIP 檔案",
                         data=st.session_state.zip_buffer,
