@@ -104,6 +104,11 @@ if 'total_input_tokens' not in st.session_state:
     st.session_state.total_input_tokens = 0
 if 'total_output_tokens' not in st.session_state:
     st.session_state.total_output_tokens = 0
+if 'split_content1' not in st.session_state:
+    st.session_state.split_content1 = True
+if 'split_content2' not in st.session_state:
+    st.session_state.split_content2 = True
+
 def create_directories():
     os.makedirs("static", exist_ok=True)
     os.makedirs("temp", exist_ok=True)
@@ -413,12 +418,14 @@ def main():
             col1.text_input("指定截圖高度 (px)", placeholder="例如：255", value=st.session_state.height, key='height_input', on_change=update_height, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col2.text_input("指定截圖寬度 (px)", placeholder="未填則預設為完整PDF頁寬", value=st.session_state.width, key='width_input', on_change=update_width,help="選填")
             st.text_area("給 ChatGPT 的 Prompt",height=286, value=st.session_state.user_input1, key='user_input_input1', on_change=update_user_input1)
+            st.checkbox("自動將文案分割欄位", value=st.session_state.split_content1, key='split_content1', help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄指定的文案格式prompt中就必須要求使用指定的文案格式")
         elif  options == "每頁商品數不固定":  
             col1, col2 = st.columns([1,1.7])
             col1.text_input("用來判斷截圖高度的符號或文字", placeholder="例如：$", value=st.session_state.symbol, key='symbol_input', on_change=update_symbol)
             col1.text_area("對應的截圖高度（px）", placeholder="數量：高度（用換行分隔）\n----------------------------------------\n2:350\n3:240", height=120, value=st.session_state.height_map_str, key='height_map_str_input', on_change=update_height_map_str, help="如何找到截圖高度？\n\n1.截一張想要的圖片範圍 \n 2.上傳Photoshop，查看左側的圖片高度")
             col1.text_area("對應的截圖寬度（px）", placeholder="未填則預設為完整PDF頁寬，寫法同截圖高度", height=120, value=st.session_state.width_map_str, key='width_map_str_input', on_change=update_width_map_str, help="選填")
             col2.text_area("給 ChatGPT 的 Prompt",height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
+            st.checkbox("自動將文案分割欄位", value=st.session_state.split_content2, key='split_content2', help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄指定的文案格式prompt中就必須要求使用指定的文案格式")
     
     elif selected == "品名翻譯":
         def translate_product_name(product_name, knowledge_data):
@@ -678,7 +685,9 @@ def main():
                 st.session_state.task_completed = True
 
                 if st.session_state.task_completed and st.session_state.zip_file_ready:
-                    st.session_state.df_text = split_columns(st.session_state.df_text)
+                    if (options == "每頁商品數固定" and st.session_state.split_content1) or (options == "每頁商品數不固定" and st.session_state.split_content2):
+                        st.session_state.df_text = split_columns(st.session_state.df_text)
+                    
                     missing_items = [item for item in texts if item not in st.session_state.df_text['貨號'].unique()]
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
