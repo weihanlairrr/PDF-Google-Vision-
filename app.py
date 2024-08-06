@@ -52,7 +52,7 @@ with st.sidebar:
         }
         [data-testid='stFileUploader'] section {
             background: #ECECEC!important;
-            color: black !重要;
+            color: black !important;
             padding: 0;
         }
         [data-testid='stFileUploader'] section > input + div {
