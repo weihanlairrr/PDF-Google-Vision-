@@ -592,6 +592,7 @@ def main():
                 st.session_state.zip_buffer = None
                 st.session_state.zip_file_ready = False
                 st.session_state.df_text = pd.DataFrame()
+                st.session_state.split_error = False
     
                 temp_dir = "temp"
                 output_dir = os.path.join(temp_dir, "output")
