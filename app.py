@@ -469,27 +469,6 @@ def main():
             col2.text_area("給 ChatGPT 的 Prompt", height=370, value=st.session_state.user_input2, key='user_input_input2', on_change=update_user_input2)
             st.checkbox("自動將文案分割為不同欄位", value=st.session_state.split_content2, key='split_content2_checkbox', on_change=update_split_content2, help="勾選後將自動依據文案格式中的【】和〖〗來將主題、標題與文案分割為不同欄位，但同時prompt中就必須要求使用特定的文案格式\n\n【指定的主題】\n\n〖標題〗\n\n1.文案1\n\n2.文案2\n\n3.······")
     elif selected == "品名翻譯":
-        def translate_product_name(product_name, knowledge_data):
-            translations = {}
-            lines = product_name.split('\n')
-            for line in lines:
-                if '：' in line:
-                    type_name, eng_name = line.split('：', 1)
-                    matching_row = knowledge_data[(knowledge_data.iloc[:, 0] == type_name) & (knowledge_data.iloc[:, 1].str.lower() == eng_name.strip().lower())]
-                    if not matching_row.empty:
-                        translations[type_name] = matching_row.iloc[0, 2]
-                    else:
-                        translations[type_name] = eng_name.strip()
-                else:
-                    translations[line] = line
-            return translations
-        
-        def load_data(file):
-            if file.name.endswith('.csv'):
-                return pd.read_csv(file)
-            elif file.name.endswith('.xlsx'):
-                return pd.read_excel(file, sheet_name=None)
-    
         col1, col2 = st.columns(2)
         with col1:
             knowledge_file = st.file_uploader("上傳翻譯對照表 CSV/XLSX", type=["xlsx", "csv"])
@@ -508,25 +487,33 @@ def main():
                 st.download_button(label="下載範例檔案", data=example_test_csv, file_name="翻譯品名範例格式.csv", mime="text/csv")
         
         if knowledge_file and test_file:
-            knowledge_data = load_data(knowledge_file)
-            if isinstance(knowledge_data, dict):
-                knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
-        
-            test_data = load_data(test_file)
-        
-            if isinstance(test_data, dict):
-                test_data = test_data[list(test_data.keys())[0]]
-        
+            try:
+                knowledge_data = load_data(knowledge_file)
+                if isinstance(knowledge_data, dict):
+                    knowledge_data = knowledge_data[list(knowledge_data.keys())[0]]
+            except Exception as e:
+                st.error(f"讀取翻譯對照表時發生錯誤：{str(e)}")
+                return
+
+            try:
+                test_data = load_data(test_file)
+                if isinstance(test_data, dict):
+                    test_data = test_data[list(test_data.keys())[0]]
+            except Exception as e:
+                st.error(f"讀取測試檔案時發生錯誤：{str(e)}")
+                return
+
             if not isinstance(test_data, pd.DataFrame):
                 st.error("無法讀取測試檔案，請檢查檔案格式是否正確。")
                 return
+
             translated_data = [] 
             column_names = test_data.columns.to_list()
             for index, row in test_data.iterrows():
                 product_translations = translate_product_name(row[column_names[1]], knowledge_data)  
                 product_translations = {column_names[0]: row[column_names[0]], **product_translations} 
                 translated_data.append(product_translations)
-        
+
             translated_df = pd.DataFrame(translated_data)
 
             placeholder1 = st.empty()
